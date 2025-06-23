@@ -169,6 +169,15 @@ export default function ProfileScreen() {
           throw new Error('Failed to update grade');
         }
         updated = true;
+        
+        // Clear stored selected subject when level changes
+        try {
+          await AsyncStorage.removeItem('lastSelectedSubject');
+          console.log('Cleared stored selected subject due to level change');
+        } catch (e) {
+          console.error('Error clearing stored subject:', e);
+        }
+        
         Toast.show({
           type: 'success',
           text1: 'Level updated successfully',

@@ -196,14 +196,21 @@ export default function HomeScreen() {
           if (storedMode && LEARNING_MODES.some(mode => mode.id === storedMode)) {
             setSelectedLearningMode(storedMode);
           }
-          
-          // Only validate and set stored subject if learnerGrade is available
-          if (storedSubject && learnerGrade && getAvailableSubjects(learnerGrade).some(subject => subject.value === storedSubject)) {
+
+          // For grade 8/9, always set subject to Mathematics
+          if ((learnerGrade === 8 || learnerGrade === 9)) {
+            setSelectedSubject('Mathematics');
+            fetchTopics('Mathematics');
+          } else if (storedSubject && learnerGrade && getAvailableSubjects(learnerGrade).some(subject => subject.value === storedSubject)) {
             setSelectedSubject(storedSubject);
             fetchTopics(storedSubject);
           } else if (storedSubject && !learnerGrade) {
             // If we have a stored subject but no grade yet, set it anyway and let the useEffect handle fetching
             setSelectedSubject(storedSubject);
+          } else {
+            // No stored subject or invalid subject for current grade - reset to null
+            setSelectedSubject(null);
+            setTopics([]);
           }
         } catch (e) {
           // Ignore errors
@@ -297,6 +304,17 @@ export default function HomeScreen() {
     } catch (e) {
       // Ignore errors
     }
+    
+    // For grade 8/9, automatically set subject to Mathematics and fetch topics
+    if ((learnerGrade === 8 || learnerGrade === 9) && !selectedSubject) {
+      setSelectedSubject('Mathematics');
+      try {
+        await AsyncStorage.setItem('lastSelectedSubject', 'Mathematics');
+      } catch (e) {
+        // Ignore errors
+      }
+      fetchTopics('Mathematics');
+    }
   };
 
   const handleBackToSubjects = async () => {
@@ -336,9 +354,13 @@ export default function HomeScreen() {
         },
       });
     } else {
-      // Practice mode: always show subtopic selection
-      setSelectedTopic(topic);
-      setShowSubtopics(true);
+      // Practice mode: if only one subtopic, auto-navigate; else show subtopic selection
+      if (topic.subtopics.length === 1) {
+        handleSubtopicPress(topic.subtopics[0].name, topic);
+      } else {
+        setSelectedTopic(topic);
+        setShowSubtopics(true);
+      }
     }
   };
 
@@ -760,7 +782,7 @@ Download now:
               <>
                 <Pressable style={styles.backButton} onPress={handleBackToSubjects}>
                   <ThemedText style={{ fontSize: 20 }}>←</ThemedText>
-                  <ThemedText style={styles.backButtonText}>Back to Subjects</ThemedText>
+                  <ThemedText style={styles.backButtonText}>Back</ThemedText>
                 </Pressable>
 
                 {isLoading ? (
@@ -803,9 +825,11 @@ Download now:
                           <ThemedText style={styles.topicQuestionCount}>
                             {formatQuestionCount(topic.questionCount)}
                           </ThemedText>
-                          <ThemedText style={styles.subtopicsCount}>
-                            {topic.subtopics.length} subtopic{topic.subtopics.length !== 1 ? 's' : ''}
-                          </ThemedText>
+                          {topic.subtopics.length > 1 && (
+                            <ThemedText style={styles.subtopicsCount}>
+                              {topic.subtopics.length} subtopic{topic.subtopics.length !== 1 ? 's' : ''}
+                            </ThemedText>
+                          )}
                         </Pressable>
                       ))}
                   </ThemedView>
@@ -873,42 +897,44 @@ Download now:
             </ThemedView>
 
             <ThemedText style={styles.learningModeTitle}>
-              Choose Subject
+              {/* Hide subject selection for grade 8/9 */}
+              {learnerGrade === 8 || learnerGrade === 9 ? null : 'Choose Subject'}
             </ThemedText>
             {/* Subject Selection */}
-            <ThemedView style={styles.subjectsContainer}>
-
-              {getAvailableSubjects(learnerGrade).map((subject) => (
-                <Pressable
-                  key={subject.value}
-                  style={({ pressed }) => [
-                    [
-                      styles.subjectCard,
-                      {
-                        backgroundColor: SUBJECT_COLORS[subject.value]
-                          ? (isDark
-                            ? SUBJECT_COLORS[subject.value].dark
-                            : SUBJECT_COLORS[subject.value].light)
-                          : colors.surface,
-                        opacity: selectedLearningMode ? 1 : 0.5,
-                      },
-                    ],
-                    pressed && styles.subjectCardPressed,
-                  ]}
-                  onPress={() => handleSubjectPress(subject.value)}
-                  disabled={!selectedLearningMode}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${subject.label}`}
-                >
-                  <ThemedText style={styles.subjectEmoji}>
-                    {SUBJECT_EMOJIS[subject.value] || '📚'}
-                  </ThemedText>
-                  <ThemedText style={styles.subjectName}>
-                    {subject.label}
-                  </ThemedText>
-                </Pressable>
-              ))}
-            </ThemedView>
+            {!(learnerGrade === 8 || learnerGrade === 9) && (
+              <ThemedView style={styles.subjectsContainer}>
+                {getAvailableSubjects(learnerGrade).map((subject) => (
+                  <Pressable
+                    key={subject.value}
+                    style={({ pressed }) => [
+                      [
+                        styles.subjectCard,
+                        {
+                          backgroundColor: SUBJECT_COLORS[subject.value]
+                            ? (isDark
+                              ? SUBJECT_COLORS[subject.value].dark
+                              : SUBJECT_COLORS[subject.value].light)
+                            : colors.surface,
+                          opacity: selectedLearningMode ? 1 : 0.5,
+                        },
+                      ],
+                      pressed && styles.subjectCardPressed,
+                    ]}
+                    onPress={() => handleSubjectPress(subject.value)}
+                    disabled={!selectedLearningMode}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${subject.label}`}
+                  >
+                    <ThemedText style={styles.subjectEmoji}>
+                      {SUBJECT_EMOJIS[subject.value] || '📚'}
+                    </ThemedText>
+                    <ThemedText style={styles.subjectName}>
+                      {subject.label}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </ThemedView>
+            )}
           </>
         )}
       </ThemedView>

@@ -216,6 +216,9 @@ export default function MathsScreen() {
     const [perfectQuestionsCount, setPerfectQuestionsCount] = useState(0);
     const [justAwardedSessionPoints, setJustAwardedSessionPoints] = useState(false);
     const awardedSessionRef = React.useRef<boolean>(false);
+    const [completedQuestionIds, setCompletedQuestionIds] = useState<number[]>([]);
+    const [showAllQuestions, setShowAllQuestions] = useState(false);
+    const [showCompletedQuestions, setShowCompletedQuestions] = useState(false); // false = new, true = completed
 
     const styles = getStyles(isDark, colors);
 
@@ -225,6 +228,41 @@ export default function MathsScreen() {
             ? [...selectedQuestion.steps.steps].sort((a, b) => a.step_number - b.step_number)
             : [];
     }, [selectedQuestion?.steps?.steps]);
+
+    // Fetch completed question ids when learnerUid changes
+    useEffect(() => {
+        async function fetchCompletedQuestionIds() {
+            if (!learnerUid) return;
+            try {
+                const response = await fetch(`${HOST_URL}/api/learner/maths-practice-question-ids?uid=${learnerUid}`);
+                const data = await response.json();
+                console.log('[FETCH COMPLETED QUESTION IDS] Data:', data);
+                if (data.status === 'OK' && data.data && Array.isArray(data.data.maths_practice_question_ids)) {
+                    setCompletedQuestionIds(data.data.maths_practice_question_ids);
+                } else {
+                    setCompletedQuestionIds([]);
+                }
+            } catch (error) {
+                setCompletedQuestionIds([]);
+            }
+        }
+        fetchCompletedQuestionIds();
+    }, [learnerUid]);
+
+    // Filtered question ids based on toggle
+    const filteredQuestionIds = useMemo(() => {
+        if (showCompletedQuestions) return questionIds.filter(id => completedQuestionIds.includes(id));
+        return questionIds.filter(id => !completedQuestionIds.includes(id));
+    }, [questionIds, completedQuestionIds, showCompletedQuestions]);
+
+    // When toggling showCompletedQuestions, reset index and load first question
+    useEffect(() => {
+        if (viewMode === 'steps' && filteredQuestionIds.length > 0) {
+            setCurrentQuestionIndex(0);
+            fetchQuestionDetails(filteredQuestionIds[0]);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showCompletedQuestions]);
 
     useEffect(() => {
         if (learnerUid) {
@@ -369,7 +407,7 @@ export default function MathsScreen() {
                 step.answer = step.answer.replace(/\=\frac/g, '=\\frac');
             });
 
-
+            console.log('[FETCH QUESTION DETAILS] context:', data.context);
             setSelectedQuestion(data);
             fetchDailyUsage();
         } catch (error) {
@@ -451,7 +489,7 @@ export default function MathsScreen() {
             return true;
         }
 
-        if (uniqueNumbers.size > uniqueAlphabets.size) {
+        if (uniqueNumbers.size >= uniqueAlphabets.size) {
             console.log('[IS LATEX] Unique numbers > unique alphabets:', text);
             return true;
         }
@@ -512,12 +550,14 @@ export default function MathsScreen() {
             return ''
         }
 
+    
+
         if (text.includes(':') && text.trim().length < 3) {
             return ''
         }
 
         if (text.includes('$')) {
-            //replace \$ with $
+            //replace \\$ with $
             text = text.replace(/\\\$/g, '$')
             //remove ** from the text
             text = text.replace(/\*\*/g, '')
@@ -533,10 +573,28 @@ export default function MathsScreen() {
                 <View style={styles.mixedContentContainer}>
                     {parts.map((part, index) => {
                         if (part.startsWith('$') && part.endsWith('$')) {
+                            console.log('[RENDER MIXED CONTENT] Part:', part);
                             //remove new line
                             part = part.replace(/\n/g, '');
-                            
-                            // Count the number of \\ sets in the LaTeX content
+                            //replace \\sqrt with \sqrt
+                            part = part.replace(/\\\\sqrt/g, '\\sqrt');
+                            part = part.replace(/\\\\dfrac/g, '\\dfrac'); 
+                            part = part.replace(/\\\\int/g, '\\int');
+                            part = part.replace(/\\\\lim/g, '\\lim');
+                            part = part.replace(/\\\\infty/g, '\\infty');
+                            part = part.replace(/\\\\alpha/g, '\\alpha');
+                            part = part.replace(/\\\\beta/g, '\\beta');
+                            part = part.replace(/\\\\gamma/g, '\\gamma');
+                            part = part.replace(/\\\\delta/g, '\\delta');
+                            part = part.replace(/\\\\theta/g, '\\theta');
+                            part = part.replace(/\\\\lambda/g, '\\lambda');
+                            part = part.replace(/\\\\mu/g, '\\mu');
+                            part = part.replace(/\\\\pi/g, '\\pi');
+                            part = part.replace(/\\\\sigma/g, '\\sigma');
+                            part = part.replace(/\\\\omega/g, '\\omega');
+                             //replace \\frac with \frac
+                            console.log('[RENDER MIXED CONTENT] new Part:', part);
+
                             const backslashCount = (part.match(/\\\\/g) || []).length;
                             const height = backslashCount > 0 ? `${60 * backslashCount}px` : undefined;
                             
@@ -550,45 +608,9 @@ export default function MathsScreen() {
                                 </View>
                             );
                         } else {
-                            const fontSize = part.length > 500 ? 12 : 18;
-
-                            if (part.trim().endsWith(':')) {
-                                part = part.trim().slice(0, -1);
-                            }
-
-                            // Remove leading comma and trim
-                            if (part.startsWith(',')) {
-                                part = part.slice(1).trim();
-                            }
-
-                            // Remove leading comma and trim
-                            if (part.startsWith(';')) {
-                                part = part.slice(1).trim();
-                            }
-
-                            // Remove leading dot and trim
-                            if (part.startsWith('.')) {
-                                part = part.slice(1).trim();
-                            }
-
-                            // Remove leading comma and trim
-                            if (part.endsWith(',')) {
-                                part = part.slice(0, -1).trim();
-                            }
-
-                            // Remove leading dot and trim
-                            if (part.endsWith('.')) {
-                                part = part.slice(0, -1).trim();
-                            }
-
-                            // Remove leading dot and trim
-                            if (part.endsWith('?')) {
-                                part = part.slice(0, -1).trim();
-                            }
-
-
+                            // Always use fontSize 14 for question, context, and hint
                             return (
-                                <ThemedText key={index} style={[styles.contentText, { color: colors.text }]}>
+                                <ThemedText key={index} style={[styles.contentText, { color: colors.text, fontSize: 14, lineHeight: 22 }]}> 
                                     {part.replace(/\*\*/g, '')}
                                 </ThemedText>
                             );
@@ -603,45 +625,35 @@ export default function MathsScreen() {
         return (
             <View style={styles.mixedContentContainer}>
                 {parts.map((part, index) => {
+                    console.log('[RENDER MIXED CONTENT] Part:', part);
                     // Handle regular text with markdown
                     if (part.trim()) {
                         // Add extra spacing before lines starting with ***
                         const needsExtraSpacing = part.trim().startsWith('***');
-                        const fontSize = part.length > 500 ? 12 : 18;
-                        if (part.trim().endsWith(':')) {
-                            part = part.trim().slice(0, -1);
-                        }
-
-
-
+                        // Always use fontSize 14 for question, context, and hint
                         // Handle regular text with bold formatting
                         const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
                         return (
                             <View key={index} style={[
                                 styles.textContainer,
                                 needsExtraSpacing && { marginTop: 2 },
-
                             ]}>
-
                                 {boldParts.map((boldPart, boldIndex) => {
-
-
                                     // For regular text (not LaTeX, not markdown), apply centered and italic if isOption
                                     if (isOption) {
                                         return (
                                             <ThemedText
                                                 key={index}
-                                                style={{ textAlign: 'center', fontStyle: 'italic', color: colors.text, fontSize: 14, width: '100%' }}
+                                                style={{ textAlign: 'center', fontStyle: 'italic', color: colors.text, fontSize: 14, width: '100%', lineHeight: 22 }}
                                             >
                                                 {part}
                                             </ThemedText>
                                         );
                                     }
-
                                     return boldPart ? (
                                         <ThemedText
                                             key={`${index}-${boldIndex}`}
-                                            style={[styles.contentText, { color: colors.text, fontSize }]}
+                                            style={[styles.contentText, { color: colors.text, fontSize: 14, lineHeight: 22 }]}
                                         >
                                             {boldPart.replace(/^\*\*\*/, '')}
                                         </ThemedText>
@@ -919,35 +931,7 @@ export default function MathsScreen() {
                         contentContainerStyle={styles.contentContainer}
                     >
                         <LocalHeader learnerInfo={learnerInfo} />
-                        
-                        {/* Show remaining questions for free users */}
-                        {learnerInfo?.subscription === 'free' && remainingMathsPractice !== null && (
-                            <View style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: isDark ? '#1E293B' : '#F0FDF4',
-                                borderRadius: 12,
-                                paddingHorizontal: 16,
-                                paddingVertical: 12,
-                                marginHorizontal: 16,
-                                marginBottom: 16,
-                                borderWidth: 1,
-                                borderColor: isDark ? '#334155' : '#BBF7D0',
-                            }}>
-                                <Text style={{ fontSize: 20, marginRight: 8 }}>📚</Text>
-                                <ThemedText style={{ 
-                                    fontSize: 16, 
-                                    fontWeight: '600',
-                                    color: isDark ? '#A7F3D0' : '#15803D'
-                                }}>
-                                    {remainingMathsPractice} question{remainingMathsPractice !== 1 ? 's' : ''} remaining today
-                                </ThemedText>
-                                {remainingMathsPractice <= 5 && (
-                                    <Text style={{ fontSize: 16, marginLeft: 8 }}>⚠️</Text>
-                                )}
-                            </View>
-                        )}
+                       
                         
                         <View style={[styles.content, {
                             backgroundColor: isDark ? colors.card : '#FFFFFF',
@@ -1049,6 +1033,19 @@ export default function MathsScreen() {
                             {viewMode === 'steps' && (
                                 <>
 
+{viewMode === 'steps' && (
+                                        <PerformanceSummary
+                                            stats={scoreStats}
+                                            onRestart={() => setScoreStats({
+                                                total_answers: 0,
+                                                correct_answers: 0,
+                                                incorrect_answers: 0,
+                                                correct_percentage: 0,
+                                                incorrect_percentage: 0,
+                                            })}
+                                        />
+                                    )}
+
                                     {selectedTopic && (
                                         <View style={{
                                             flexDirection: 'row',
@@ -1068,6 +1065,8 @@ export default function MathsScreen() {
                                             </ThemedText>
                                         </View>
                                     )}
+
+                                    
 
                                     {/* Show remaining questions indicator in steps view */}
                                     {learnerInfo?.subscription === 'free' && remainingMathsPractice !== null && (
@@ -1097,19 +1096,42 @@ export default function MathsScreen() {
                                         </View>
                                     )}
 
+                                    
+
                                     {viewMode === 'steps' && (
-                                        <PerformanceSummary
-                                            stats={scoreStats}
-                                            onRestart={() => setScoreStats({
-                                                total_answers: 0,
-                                                correct_answers: 0,
-                                                incorrect_answers: 0,
-                                                correct_percentage: 0,
-                                                incorrect_percentage: 0,
-                                            })}
-                                        />
+                                        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 8, width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 10, overflow: 'hidden', backgroundColor: isDark ? '#23272F' : '#E5E7EB', borderWidth: 1, borderColor: isDark ? '#334155' : '#CBD5E1' }}>
+                                            <TouchableOpacity
+                                                style={{
+                                                    flex: 1,
+                                                    backgroundColor: !showCompletedQuestions ? (isDark ? '#6366F1' : '#4F46E5') : 'transparent',
+                                                    paddingVertical: 12,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}
+                                                onPress={() => setShowCompletedQuestions(false)}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Show new questions"
+                                            >
+                                                <ThemedText style={{ color: !showCompletedQuestions ? '#fff' : (isDark ? '#A7F3D0' : '#1E293B'), fontWeight: '600', fontSize: 16 }}>New</ThemedText>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={{
+                                                    flex: 1,
+                                                    backgroundColor: showCompletedQuestions ? (isDark ? '#6366F1' : '#4F46E5') : 'transparent',
+                                                    paddingVertical: 12,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}
+                                                onPress={() => setShowCompletedQuestions(true)}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Show completed questions"
+                                            >
+                                                <ThemedText style={{ color: showCompletedQuestions ? '#fff' : (isDark ? '#A7F3D0' : '#1E293B'), fontWeight: '600', fontSize: 16 }}>Completed</ThemedText>
+                                            </TouchableOpacity>
+                                        </View>
                                     )}
 
+                                    
                                     {/* Add Question Navigation Arrows and Progress Indicator */}
                                     <View style={{ alignItems: 'center', marginBottom: 4 }}>
                                         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 4 }}>
@@ -1118,7 +1140,7 @@ export default function MathsScreen() {
                                                     if (currentQuestionIndex > 0) {
                                                         const prevIndex = currentQuestionIndex - 1;
                                                         setCurrentQuestionIndex(prevIndex);
-                                                        await fetchQuestionDetails(questionIds[prevIndex]);
+                                                        await fetchQuestionDetails(filteredQuestionIds[prevIndex]);
                                                         setCurrentStepIndex(0);
                                                         setSelectedOptionIndex(null);
                                                         setShowHint(false);
@@ -1136,15 +1158,17 @@ export default function MathsScreen() {
                                             {/* Next Question Icon */}
                                             <TouchableOpacity
                                                 onPress={async () => {
-                                                    if (currentQuestionIndex < questionIds.length - 1) {
+                                                    if (currentQuestionIndex < filteredQuestionIds.length - 1) {
                                                         setCurrentStepIndex(0);
                                                         setSelectedOptionIndex(null);
                                                         setShowHint(false);
-                                                        await loadNextQuestion();
+                                                        const nextIndex = currentQuestionIndex + 1;
+                                                        setCurrentQuestionIndex(nextIndex);
+                                                        await fetchQuestionDetails(filteredQuestionIds[nextIndex]);
                                                     }
                                                 }}
-                                                disabled={currentQuestionIndex === questionIds.length - 1}
-                                                style={{ opacity: currentQuestionIndex === questionIds.length - 1 ? 0.5 : 1, padding: 8 }}
+                                                disabled={currentQuestionIndex === filteredQuestionIds.length - 1}
+                                                style={{ opacity: currentQuestionIndex === filteredQuestionIds.length - 1 ? 0.5 : 1, padding: 8 }}
                                                 accessibilityRole="button"
                                                 accessibilityLabel="Next Question"
                                             >
@@ -1158,14 +1182,14 @@ export default function MathsScreen() {
                                                         style={[
                                                             styles.questionProgressFill,
                                                             {
-                                                                width: `${((currentQuestionIndex + 1) / questionIds.length) * 100}%`,
+                                                                width: `${((currentQuestionIndex + 1) / filteredQuestionIds.length) * 100}%`,
                                                                 backgroundColor: '#22C55E' // Green
                                                             }
                                                         ]}
                                                     />
                                                 </View>
                                                 <ThemedText style={styles.questionProgressText}>
-                                                    Question {currentQuestionIndex + 1} of {questionIds.length}
+                                                    Question {currentQuestionIndex + 1} of {filteredQuestionIds.length}
                                                 </ThemedText>
                                             </View>
                                         </View>
@@ -1173,7 +1197,7 @@ export default function MathsScreen() {
                                 </>
                             )}
 
-                            {viewMode === 'steps' && selectedQuestion && !isLoadingQuestion && questionIds.length > 0 && (
+                            {viewMode === 'steps' && selectedQuestion && !isLoadingQuestion && filteredQuestionIds.length > 0 && (
                                 <View style={styles.stepsViewContainer}>
 
                                     <View style={[styles.stepsCard, { paddingTop: 8, paddingBottom: 96 }]}>
@@ -1269,18 +1293,7 @@ export default function MathsScreen() {
                                                         </View>
                                                     )}
                                                 </View>
-                                                {sortedSteps[currentStepIndex]?.expression && (
-                                                    <View style={[styles.stepsTitle, { marginBottom: 24, marginTop: 24 }]}>
-                                                        <ThemedText style={{ fontSize: 16, color: colors.textSecondary, marginBottom: 8 }}>
-                                                            What is ? in the below expression.
-                                                        </ThemedText>
-                                                        {sortedSteps[currentStepIndex]?.expression.split('\n').map((line, index) => (
-                                                            <View key={index}>
-                                                                {renderMixedContent(line, isDark, colors)}
-                                                            </View>
-                                                        ))}
-                                                    </View>
-                                                )}
+                                                
                                                 <TouchableOpacity
                                                     style={{ marginBottom: 8, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 16, borderRadius: 8, backgroundColor: isDark ? '#334155' : '#E0E7EF' }}
                                                     onPress={() => setShowHint(v => !v)}
@@ -1292,7 +1305,7 @@ export default function MathsScreen() {
                                                     </ThemedText>
                                                 </TouchableOpacity>
                                                 {showHint && (
-                                                    <View style={{ marginTop: 8 }}>
+                                                    <View style={{ marginTop: 8, marginBottom: 8 }}>
                                                         {sortedSteps[currentStepIndex]?.hint.split('\n').map((line, index) => (
                                                             <View key={index}>
                                                                 {renderMixedContent(line, isDark, colors)}
@@ -1373,7 +1386,7 @@ export default function MathsScreen() {
 
                                                                     // If this is the last step, update daily usage
                                                                     if (currentStepIndex === sortedSteps.length - 1) {
-                                                                        fetch(`${HOST_URL}/api/learner/daily-usage/maths-practice?uid=${user?.uid}&question_id=${questionIds[currentQuestionIndex]}`, {
+                                                                        fetch(`${HOST_URL}/api/learner/daily-usage/maths-practice?uid=${user?.uid}&question_id=${filteredQuestionIds[currentQuestionIndex]}`, {
                                                                             method: 'POST',
                                                                             headers: {
                                                                                 'Content-Type': 'application/json'
@@ -1415,7 +1428,7 @@ export default function MathsScreen() {
                                             <View style={{ marginTop: 16, marginBottom: 16 }}>
                                                 {selectedOptionIndex !== null && (
                                                     selectedOptionIndex === correctAnswerIndex ? (
-                                                        <ThemedText style={{ fontSize: 20, marginBottom: 8, textAlign: 'center' }} accessibilityRole="alert">🎉 Congratulations!</ThemedText>
+                                                        <ThemedText style={{ fontSize: 20, marginBottom: 8, textAlign: 'center' }} accessibilityRole="alert"> ✅ That's correct!</ThemedText>
                                                     ) : (
                                                         <ThemedText style={{ fontSize: 20, marginBottom: 8, textAlign: 'center' }} accessibilityRole="alert">❌ That's not correct!</ThemedText>
                                                     )
@@ -1545,7 +1558,7 @@ export default function MathsScreen() {
                                     <SafeAreaView style={styles.stickyButtonBar} edges={['bottom']}>
 
                                         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
-                                            {currentQuestionIndex < questionIds.length - 1 && (
+                                            {currentQuestionIndex < filteredQuestionIds.length - 1 && (
                                                 <TouchableOpacity
                                                     style={styles.modernButton}
                                                     onPress={() => {
@@ -1697,7 +1710,7 @@ function getStyles(isDark: boolean, colors: any) {
         },
         questionTextModern: {
             color: isDark ? '#F3F4F6' : '#1E293B',
-            fontSize: 16,
+            fontSize: 14,
             marginBottom: 8,
         },
         stepsTitle: {
@@ -1705,12 +1718,12 @@ function getStyles(isDark: boolean, colors: any) {
             marginBottom: 12,
         },
         stepsHint: {
-            fontSize: 16,
+            fontSize: 14,
             fontStyle: 'italic',
             marginBottom: 8,
         },
         stepsTeach: {
-            fontSize: 16,
+            fontSize: 14,
             marginBottom: 16,
             lineHeight: 24,
         },
@@ -1934,7 +1947,7 @@ function getStyles(isDark: boolean, colors: any) {
             marginBottom: 4,
         },
         contentText: {
-            fontSize: 16,
+            fontSize: 14,
         },
         bulletListContainer: {
             flexDirection: 'row',
@@ -1947,11 +1960,11 @@ function getStyles(isDark: boolean, colors: any) {
             gap: 8,
         },
         bulletPoint: {
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: 'bold',
         },
         bulletPointText: {
-            fontSize: 16,
+            fontSize: 14,
         },
         bulletTextWrapper: {
             flexDirection: 'row',

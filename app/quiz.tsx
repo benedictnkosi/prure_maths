@@ -1457,6 +1457,11 @@ export default function QuizScreen() {
                     setRecordingFileName('');
                     setLectureData(null);
                 }
+
+                //log answer
+                console.log('answer', data.answer);
+                //log question id
+                console.log('question id', data.id);
                 // Shuffle options
                 const options = data.options;
                 const entries = Object.entries(options);

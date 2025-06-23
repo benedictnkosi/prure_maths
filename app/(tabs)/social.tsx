@@ -704,25 +704,6 @@ export default function AchievementsScreen() {
                     badges: badgesWithStatus.filter(badge =>
                         badge.image.includes('in-a-row')
                     )
-                },
-                {
-                    title: 'Reading Champion 📖',
-                    badges: badgesWithStatus.filter(badge =>
-                        badge.image === 'reading-level-2.png' ||
-                        badge.image === 'reading-level-3.png' ||
-                        badge.image === 'reading-level-4.png'
-                    )
-                },
-                {
-                    title: 'Quiz Master 🎓',
-                    badges: badgesWithStatus.filter(badge =>
-                        !badge.image.includes('in-a-row') &&
-                        !badge.image.includes('day-streak') &&
-                        badge.image !== 'reading-level-2.png' &&
-                        badge.image !== 'reading-level-3.png' &&
-                        badge.image !== 'reading-level-4.png' &&
-                        badge.earned
-                    )
                 }
             ];
 
@@ -959,7 +940,7 @@ export default function AchievementsScreen() {
                 }
             } else {
                 // Fallback to regular share if sharing is not available
-                const message = `I just earned the ${badge.name} badge on Pure Maths App! 🎉\n\n${badge.rules}\n\nJoin me on Pure Maths App and start earning badges too! https://puremaths.co.za`;
+                const message = `I just earned the ${badge.name} badge on Dimpo Maths App! 🎉\n\n${badge.rules}\n\nJoin me on Dimpo Maths App and start earning badges too! https://puremaths.co.za`;
                 await Share.share({
                     message,
                     title: 'Share Badge Achievement'

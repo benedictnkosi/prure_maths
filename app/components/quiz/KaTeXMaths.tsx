@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WebView } from 'react-native-webview';
 import { ScrollView } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -14,8 +14,21 @@ export function KaTeX({ latex, isOption, fontSize = '1em', height = '60px' }: Ka
     const [webViewHeight, setWebViewHeight] = useState(60);
     const { isDark } = useTheme();
 
+    // Reset height when height prop changes
+    useEffect(() => {
+        if (height) {
+            const heightValue = parseInt(height.replace('px', ''));
+            setWebViewHeight(heightValue);
+        } else {
+            setWebViewHeight(60); // Default height
+        }
+    }, [height]);
+
     const textColor = isDark ? '#4ADE80' : '#334155';
     const backgroundColor = isDark ? 'transparent' : 'transparent';
+
+    console.log('passed', latex);
+    console.log('height', height);
 
     const html = `
         <!DOCTYPE html>

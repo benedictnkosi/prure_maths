@@ -1,8 +1,8 @@
 import { StyleSheet, View, Image, TouchableOpacity, ImageSourcePropType, Platform, useColorScheme } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { HOST_URL } from '@/config/api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,14 +26,7 @@ interface LearnerInfo {
   points?: number;
   streak?: number;
   school?: string;
-}
-
-interface StreakInfo {
-  calculatedFromProgress: boolean;
-  id: number;
-  lastActivityDate: string;
-  streak: number;
-  uid: string;
+  maths_points?: number;
 }
 
 function getInitial(name?: string) {
@@ -46,46 +39,45 @@ export function Header() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [learnerInfo, setLearnerInfo] = useState<LearnerInfo | null>(null);
-  const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchLearnerInfo() {
-      try {
-        const authData = await SecureStore.getItemAsync('auth');
-        if (!authData) {
-          setIsLoading(false);
-          return;
-        }
-        const { user } = JSON.parse(authData);
-        if (!user?.uid) {
-          setIsLoading(false);
-          return;
-        }
-        const [learnerResponse, streakResponse] = await Promise.all([
-          fetch(`${HOST_URL}/api/language-learners/uid/${user.uid}`),
-          fetch(`${HOST_URL}/api/language-learners/${user.uid}/streak`)
-        ]);
-
-        if (!learnerResponse.ok || !streakResponse.ok) {
-          throw new Error('Failed to fetch learner info');
-        }
-
-        const [learnerData, streakData] = await Promise.all([
-          learnerResponse.json(),
-          streakResponse.json()
-        ]);
-
-        setLearnerInfo(learnerData);
-        setStreakInfo(streakData);
-      } catch (error) {
-        console.error('Error fetching learner info:', error);
-      } finally {
+  async function fetchLearnerInfo() {
+    try {
+      const authData = await SecureStore.getItemAsync('auth');
+      if (!authData) {
         setIsLoading(false);
+        return;
       }
+      const { user } = JSON.parse(authData);
+      if (!user?.uid) {
+        setIsLoading(false);
+        return;
+      }
+      const learnerResponse = await fetch(`${HOST_URL}/public/learn/learner?uid=${user.uid}`);
+
+      if (!learnerResponse.ok) {
+        throw new Error('Failed to fetch learner info');
+      }
+
+      const learnerData = await learnerResponse.json();
+
+      setLearnerInfo(learnerData);
+    } catch (error) {
+      console.error('Error fetching learner info:', error);
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchLearnerInfo();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchLearnerInfo();
+    }, [])
+  );
 
   const avatarSource = learnerInfo?.avatar && avatarImages[learnerInfo.avatar]
     ? avatarImages[learnerInfo.avatar]
@@ -96,7 +88,7 @@ export function Header() {
       <View style={styles.row}>
         <View style={styles.greetingSection}>
           <ThemedText style={[styles.greetingText, { color: isDark ? '#F3F4F6' : '#22223B' }]}>
-            Pure Maths <ThemedText style={styles.wave}>➗</ThemedText>
+          Dimpo Maths <ThemedText style={styles.wave}>➗</ThemedText>
           </ThemedText>
           <ThemedText style={[styles.schoolText, { color: isDark ? '#9CA3AF' : '#64748B' }]}>
             Learn to solve maths problems
@@ -122,13 +114,13 @@ export function Header() {
         <View style={styles.cardColumn}>
           <MaterialCommunityIcons name="trophy-outline" size={32} color="#F59E0B" style={styles.icon} />
           <ThemedText style={[styles.cardLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]}>Your Points</ThemedText>
-          <ThemedText style={[styles.cardValue, { color: isDark ? '#60A5FA' : '#3B82F6' }]}>{learnerInfo?.points ?? 0}</ThemedText>
+          <ThemedText style={[styles.cardValue, { color: isDark ? '#60A5FA' : '#3B82F6' }]}>{learnerInfo?.maths_points ?? 0}</ThemedText>
         </View>
         <View style={[styles.divider, { backgroundColor: isDark ? '#4B5563' : '#E5E7EB' }]} />
         <View style={styles.cardColumn}>
           <MaterialCommunityIcons name="fire" size={32} color="#EF4444" style={styles.icon} />
           <ThemedText style={[styles.cardLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]}>Learning Streak</ThemedText>
-          <ThemedText style={[styles.cardValue, { color: isDark ? '#60A5FA' : '#3B82F6' }]}>{streakInfo?.streak ?? 0}</ThemedText>
+          <ThemedText style={[styles.cardValue, { color: isDark ? '#60A5FA' : '#3B82F6' }]}>{learnerInfo?.streak ?? 0}</ThemedText>
         </View>
       </View>
     </View>

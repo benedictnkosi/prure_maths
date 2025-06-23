@@ -780,25 +780,7 @@ export default function LearnerPerformanceScreen() {
                     <View style={styles.closeButton} />
                 </View>
                 <View style={styles.headerActions}>
-                    <TouchableOpacity
-                        style={[
-                            styles.shareButton,
-                            {
-                                backgroundColor: isDark ? 'rgba(99,102,241,0.2)' : '#6366F1',
-                                borderColor: isDark ? 'rgba(99,102,241,0.4)' : '#6366F1',
-                            }
-                        ]}
-                        onPress={handleShare}
-                    >
-                        <Ionicons
-                            name="share-outline"
-                            size={20}
-                            color={isDark ? '#FFFFFF' : '#FFFFFF'}
-                        />
-                        <ThemedText style={[styles.shareButtonText, { color: '#FFFFFF' }]}>
-                            Share Report
-                        </ThemedText>
-                    </TouchableOpacity>
+                    
                     {user?.uid !== uid && !isFollowingLoading && (
                         <TouchableOpacity
                             style={[

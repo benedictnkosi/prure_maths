@@ -1,15 +1,15 @@
 export default {
-  name: 'Pure Maths',
-  slug: 'pure-maths',
+  name: 'Dimpo Maths',
+  slug: 'dimpo-maths',
   version: '1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'puremaths',
+  scheme: 'dimpo-maths',
   userInterfaceStyle: 'automatic',
   newArchEnabled: false,
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.puremaths',
+    bundleIdentifier: 'com.dimpomaths',
     buildNumber: '1.0.2',
     googleServicesFile: './GoogleService-Info.plist',
     infoPlist: {
@@ -19,7 +19,7 @@ export default {
     "associatedDomains": ["applinks:examquiz.co.za"]
   },
   android: {
-    package: 'com.puremaths',
+    package: 'com.dimpomaths',
     "intentFilters": [
       {
         "action": "VIEW",

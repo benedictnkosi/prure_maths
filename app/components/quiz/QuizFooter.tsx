@@ -83,7 +83,7 @@ export function QuizFooter({
                         onPress={onNext}
                         testID="next-question-button"
                     >
-                        <Ionicons name="play" size={20} color="#FFFFFF" />
+                       
                         <View style={styles.buttonTextContainer}>
                             <ThemedText style={styles.footerButtonText}>
                                 {selectedMode === 'lessons' ? '📚 Next Lesson' : selectedMode === 'practice' ? '🎯 Keep Going!' : '🎯 Keep Going!'}

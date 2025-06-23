@@ -419,7 +419,7 @@ export default function OnboardingScreen() {
             </View>
             <View style={[styles.textContainer, { paddingHorizontal: 20 }]} testID="welcome-text-container">
               <ThemedText style={[styles.welcomeTitle, { fontSize: 24, marginBottom: 24 }]} testID="welcome-title">
-                Welcome to Pure Maths
+                Welcome to Dimpo Maths
               </ThemedText>
               <ThemedText style={[styles.welcomeText, { fontSize: 20, lineHeight: 32, marginBottom: 24 }]} testID="welcome-description">
                 🌟 Master Pure Maths! Start your journey today 🌟

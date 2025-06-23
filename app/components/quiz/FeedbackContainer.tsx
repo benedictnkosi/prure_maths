@@ -265,6 +265,7 @@ export function FeedbackContainer({
                             }
                         });
                     }}
+                    activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityLabel="Practice This Question"
                 >
@@ -437,6 +438,6 @@ const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
         borderRadius: 8,
         width: '100%',
         alignItems: 'center',
-        backgroundColor: isDark ? '#8B5CF6' : '#A78BFA', // purple-500/400
+        backgroundColor: isDark ? '#7C3AED' : '#8B5CF6', // purple-600/500
     },
 }); 

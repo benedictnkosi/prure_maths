@@ -96,7 +96,7 @@ export default function Login() {
           >
             <View style={styles.content}>
               <View style={styles.header}>
-                <ThemedText style={styles.title}>➗ Pure Maths</ThemedText>
+                <ThemedText style={styles.title}>➗ Dimpo Maths</ThemedText>
                 <ThemedText style={styles.subtitle}>Master Pure Maths! Start your journey today 🌟</ThemedText>
               </View>
 
@@ -148,7 +148,7 @@ export default function Login() {
 
                 <View style={styles.registerContainer}>
                   <ThemedText style={styles.helperText}>
-                    New to Pure Maths? Join our community of math learners! 🌍
+                    New to Dimpo Maths? Join our community of math learners! 🌍
                   </ThemedText>
                   <TouchableOpacity
                     style={styles.createAccountButton}

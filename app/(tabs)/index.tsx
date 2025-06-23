@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Pressable, ActivityIndicator, View, ScrollView } from 'react-native';
+import { StyleSheet, Pressable, ActivityIndicator, View, ScrollView, Share, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,11 +19,20 @@ const LEARNING_MODES = [
   { id: 'quiz', label: 'Quiz', emoji: '🎯', description: 'Test your knowledge' }
 ];
 
-// Available subjects
-const AVAILABLE_SUBJECTS = [
-  { label: 'Mathematics', value: 'Mathematics' },
-  { label: 'Applied Maths	', value: 'Technical Mathematics' },
-];
+// Available subjects - now dynamic based on grade
+const getAvailableSubjects = (grade: number | null) => {
+  const allSubjects = [
+    { label: 'Mathematics', value: 'Mathematics' },
+    { label: 'Applied Maths	', value: 'Technical Mathematics' },
+  ];
+  
+  // Hide Technical Mathematics for grades 8 and 9 (level 1 and 2)
+  if (grade === 8 || grade === 9) {
+    return allSubjects.filter(subject => subject.value !== 'Technical Mathematics');
+  }
+  
+  return allSubjects;
+};
 
 // Subject emojis
 const SUBJECT_EMOJIS: Record<string, string> = {
@@ -176,6 +185,32 @@ export default function HomeScreen() {
 
       fetchLearnerData();
 
+      // Load last selected learning mode and subject every time screen comes into focus
+      const loadLastSelections = async () => {
+        try {
+          const [storedMode, storedSubject] = await Promise.all([
+            AsyncStorage.getItem('lastLearningMode'),
+            AsyncStorage.getItem('lastSelectedSubject')
+          ]);
+          
+          if (storedMode && LEARNING_MODES.some(mode => mode.id === storedMode)) {
+            setSelectedLearningMode(storedMode);
+          }
+          
+          // Only validate and set stored subject if learnerGrade is available
+          if (storedSubject && learnerGrade && getAvailableSubjects(learnerGrade).some(subject => subject.value === storedSubject)) {
+            setSelectedSubject(storedSubject);
+            fetchTopics(storedSubject);
+          } else if (storedSubject && !learnerGrade) {
+            // If we have a stored subject but no grade yet, set it anyway and let the useEffect handle fetching
+            setSelectedSubject(storedSubject);
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      };
+      loadLastSelections();
+
       // Check for passed parameters from calling page
       // Auto-set learning mode if passed
       if (passedLearningMode && LEARNING_MODES.some(mode => mode.id === passedLearningMode)) {
@@ -184,7 +219,7 @@ export default function HomeScreen() {
       }
 
       // Auto-set subject if passed
-      if (passedSubject && AVAILABLE_SUBJECTS.some(subject => subject.value === passedSubject)) {
+      if (passedSubject && getAvailableSubjects(learnerGrade).some(subject => subject.value === passedSubject)) {
         console.log('Auto-setting subject to:', passedSubject);
         setSelectedSubject(passedSubject);
         fetchTopics(passedSubject);
@@ -192,14 +227,14 @@ export default function HomeScreen() {
 
       // Reset to subjects view when tab is focused (only if no parameters passed)
       if (!passedLearningMode && !passedSubject && !passedTopic) {
-        setSelectedSubject(null);
+        // Don't reset subject here - let loadLastSelections handle it
         setTopics([]);
         setError(null);
         setSelectedTopic(null);
         setShowSubtopics(false);
-        setSelectedLearningMode(null);
+        // Don't reset learning mode here - let loadLastSelections handle it
       }
-    }, [user?.uid, passedLearningMode, passedSubject, passedTopic])
+    }, [user?.uid, passedLearningMode, passedSubject, passedTopic, learnerGrade])
   );
 
   // Auto-select topic when topics are loaded and a topic is passed
@@ -214,24 +249,17 @@ export default function HomeScreen() {
     }
   }, [topics, passedTopic, isLoading]);
 
-  // Load last selected learning mode on mount
+  // Retry fetching topics when learner grade becomes available
   useEffect(() => {
-    const loadLastLearningMode = async () => {
-      try {
-        const storedMode = await AsyncStorage.getItem('lastLearningMode');
-        if (storedMode && LEARNING_MODES.some(mode => mode.id === storedMode)) {
-          setSelectedLearningMode(storedMode);
-        }
-      } catch (e) {
-        // Ignore errors
-      }
-    };
-    loadLastLearningMode();
-  }, []);
+    if (learnerGrade && selectedSubject && topics.length === 0 && !isLoading) {
+      console.log('Retrying to fetch topics for stored subject:', selectedSubject);
+      fetchTopics(selectedSubject);
+    }
+  }, [learnerGrade, selectedSubject]);
 
   async function fetchTopics(subject: string) {
     if (!learnerGrade) {
-      setError('Unable to determine your grade level');
+      console.log('Learner grade not available yet, will retry when grade is loaded');
       return;
     }
 
@@ -252,8 +280,13 @@ export default function HomeScreen() {
     }
   }
 
-  const handleSubjectPress = (subject: string) => {
+  const handleSubjectPress = async (subject: string) => {
     setSelectedSubject(subject);
+    try {
+      await AsyncStorage.setItem('lastSelectedSubject', subject);
+    } catch (e) {
+      // Ignore errors
+    }
     fetchTopics(subject);
   };
 
@@ -270,6 +303,12 @@ export default function HomeScreen() {
     setSelectedSubject(null);
     setTopics([]);
     setError(null);
+    // Clear stored subject when manually going back
+    try {
+      await AsyncStorage.removeItem('lastSelectedSubject');
+    } catch (e) {
+      // Ignore errors
+    }
     // setSelectedLearningMode(null);
     try {
       const storedMode = await AsyncStorage.getItem('lastLearningMode');
@@ -296,11 +335,8 @@ export default function HomeScreen() {
           learningMode: selectedLearningMode,
         },
       });
-    } else if (topic.subtopics.length === 1) {
-      // Practice mode, only one subtopic: go directly to subtopic
-      handleSubtopicPress(topic.subtopics[0].name, topic);
     } else {
-      // Practice mode, multiple subtopics: show subtopic selection
+      // Practice mode: always show subtopic selection
       setSelectedTopic(topic);
       setShowSubtopics(true);
     }
@@ -382,6 +418,38 @@ export default function HomeScreen() {
     }
   };
 
+  const handleShareApp = async () => {
+    try {
+      const iosLink = 'https://apps.apple.com/za/app/dimpo-learning-app/6747572593';
+      const androidLink = 'https://play.google.com/store/apps/details?id=za.co.dimpomaths';
+
+      const shareMessage = `📚 Master Mathematics with Dimpo Maths App! 🧮
+
+🎯 Practice with step-by-step solutions
+📊 Track your progress and earn badges
+🏆 Compete with friends and climb leaderboards
+📱 Perfect for exam preparation
+
+Download now:
+📱 iOS: ${iosLink}
+🤖 Android: ${androidLink}
+
+#PureMaths #Mathematics #ExamPrep #Learning`;
+
+      await Share.share({
+        message: shareMessage,
+        title: 'Dimpo Maths App',
+        url: Platform.select({
+          ios: iosLink,
+          android: androidLink,
+          default: androidLink
+        }),
+      });
+    } catch (error) {
+      console.error('Error sharing app:', error);
+    }
+  };
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -456,15 +524,13 @@ export default function HomeScreen() {
       marginLeft: 8,
     },
     subjectsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: 'column',
       gap: 16,
-      justifyContent: 'center',
       paddingHorizontal: 20,
       paddingBottom: 24,
     },
     subjectCard: {
-      width: '45%',
+      width: '100%',
       paddingVertical: 40,
       paddingHorizontal: 24,
       borderRadius: 18,
@@ -573,38 +639,72 @@ export default function HomeScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header />
       <ThemedView style={styles.container}>
-        {/* View My Report Button - only show if user is logged in */}
-        {user?.uid && (
-          <Pressable
-            style={({ pressed }) => [
-              {
-                marginHorizontal: 20,
-                marginTop: 16,
-                marginBottom: 8,
-                paddingVertical: 14,
-                borderRadius: 12,
-                backgroundColor: isDark ? colors.primary : '#6366F1',
-                alignItems: 'center',
-                opacity: pressed ? 0.85 : 1,
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8,
-              },
-            ]}
-            onPress={() => {
-              router.push({
-                pathname: '/report/[uid]',
-                params: { uid: user.uid, name: user.displayName || 'Me' },
-              });
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="View my performance report"
-          >
-            <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
-              🏆 View My Report
-            </ThemedText>
-          </Pressable>
+        {/* View My Report Button and Share App Button - only show if no subject is selected */}
+        {!selectedSubject && (
+          <>
+            {/* View My Report Button - only show if user is logged in */}
+            {user?.uid && (
+              <Pressable
+                style={({ pressed }) => [
+                  {
+                    marginHorizontal: 20,
+                    marginTop: 16,
+                    marginBottom: 8,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    backgroundColor: isDark ? colors.primary : '#6366F1',
+                    alignItems: 'center',
+                    opacity: pressed ? 0.85 : 1,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 8,
+                  },
+                ]}
+                onPress={() => {
+                  router.push({
+                    pathname: '/report/[uid]',
+                    params: { uid: user.uid, name: user.displayName || 'Me' },
+                  });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="View my performance report"
+              >
+                <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                  🏆 View My Report
+                </ThemedText>
+              </Pressable>
+            )}
+
+            {/* Share App Button */}
+            <Pressable
+              style={({ pressed }) => [
+                {
+                  marginHorizontal: 20,
+                  marginTop: 8,
+                  marginBottom: 16,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  backgroundColor: isDark ? colors.surface : '#F3F4F6',
+                  borderWidth: 1,
+                  borderColor: isDark ? colors.border : '#E5E7EB',
+                  alignItems: 'center',
+                  opacity: pressed ? 0.85 : 1,
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 8,
+                },
+              ]}
+              onPress={handleShareApp}
+              accessibilityRole="button"
+              accessibilityLabel="Share Dimpo Maths app"
+            >
+              <ThemedText style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>
+                📤 Invite a Friend
+              </ThemedText>
+            </Pressable>
+          </>
         )}
+
         {isLoadingGrade ? (
           // Show loading state while fetching learner grade
           <View style={styles.loadingContainer}>
@@ -778,7 +878,7 @@ export default function HomeScreen() {
             {/* Subject Selection */}
             <ThemedView style={styles.subjectsContainer}>
 
-              {AVAILABLE_SUBJECTS.map((subject) => (
+              {getAvailableSubjects(learnerGrade).map((subject) => (
                 <Pressable
                   key={subject.value}
                   style={({ pressed }) => [

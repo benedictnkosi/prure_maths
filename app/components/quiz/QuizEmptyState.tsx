@@ -43,7 +43,7 @@ export function QuizEmptyState({
         default: 'https://play.google.com/store/apps/details?id=za.co.examquizafrica'
     });
 
-    const parentMessage = `Hi! I've been using the Pure Maths app to study for school and I just reached my daily limit.
+    const parentMessage = `Hi! I've been using the Dimpo Maths app to study for school and I just reached my daily limit.
 It really helps me with maths — can you please help me upgrade to Pro so I can keep learning every day? 🙏
 
 You can check it out here:
@@ -54,7 +54,7 @@ You can check it out here:
             await Share.share({
                 message: parentMessage,
                 url: storeLink,
-                title: 'Pure Maths Pro Upgrade'
+                title: 'Dimpo Maths Pro Upgrade'
             });
         } catch (error) {
             console.error('Error sharing:', error);

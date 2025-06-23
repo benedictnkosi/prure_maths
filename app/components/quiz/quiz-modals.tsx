@@ -541,7 +541,7 @@ export const UpgradeNudgeModal = ({
     const content = {
         quiz: {
             title: "🎯 You're on a roll!",
-            message: `You've got just 5 questions left today.${'\n\n'}Want to finish strong without waiting for tomorrow?${'\n\n'}👉 Upgrade to Pure Maths Pro for unlimited access — no stops, no limits.`,
+            message: `You've got just 5 questions left today.${'\n\n'}Want to finish strong without waiting for tomorrow?${'\n\n'}👉 Upgrade to Dimpo Maths Pro for unlimited access — no stops, no limits.`,
             primaryButton: "Upgrade to Pro",
             secondaryButton: "⏳ I'll wait for tomorrow",
             primaryAccessibilityLabel: "Upgrade to Pro for unlimited questions",
@@ -549,7 +549,7 @@ export const UpgradeNudgeModal = ({
         },
         lessons: {
             title: "📚 Learning Streak!",
-            message: `You've got just 5 lessons left today.${'\n\n'}Want to keep your learning momentum going?${'\n\n'}👉 Upgrade to Pure Maths Pro for unlimited lessons — learn at your own pace.`,
+            message: `You've got just 5 lessons left today.${'\n\n'}Want to keep your learning momentum going?${'\n\n'}👉 Upgrade to Dimpo Maths Pro for unlimited lessons — learn at your own pace.`,
             primaryButton: "Upgrade to Pro",
             secondaryButton: "⏳ I'll wait for tomorrow",
             primaryAccessibilityLabel: "Upgrade to Pro for unlimited lessons",
@@ -557,7 +557,7 @@ export const UpgradeNudgeModal = ({
         },
         practice: {
             title: "🎯 Keep Practicing!",
-            message: `You've got just 1 practice questions left today.${'\n\n'}Want to keep improving without limits?${'\n\n'}👉 Upgrade to Pure Maths Pro for unlimited practice — master at your own pace.`,
+            message: `You've got just 1 practice questions left today.${'\n\n'}Want to keep improving without limits?${'\n\n'}👉 Upgrade to Dimpo Maths Pro for unlimited practice — master at your own pace.`,
             primaryButton: "Upgrade to Pro",
             secondaryButton: "⏳ I'll wait for tomorrow",
             primaryAccessibilityLabel: "Upgrade to Pro for unlimited practice",
@@ -565,7 +565,7 @@ export const UpgradeNudgeModal = ({
         },
         podcast: {
             title: "🎧 Keep Listening!",
-            message: `You've got just 1 podcasts left today.${'\n\n'}Want to keep learning on the go?${'\n\n'}👉 Upgrade to Pure Maths Pro for unlimited podcasts — learn anywhere, anytime.`,
+            message: `You've got just 1 podcasts left today.${'\n\n'}Want to keep learning on the go?${'\n\n'}👉 Upgrade to Dimpo Maths Pro for unlimited podcasts — learn anywhere, anytime.`,
             primaryButton: "Upgrade to Pro",
             secondaryButton: "⏳ I'll wait for tomorrow",
             primaryAccessibilityLabel: "Upgrade to Pro for unlimited podcasts",

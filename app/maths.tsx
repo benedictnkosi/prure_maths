@@ -137,7 +137,7 @@ function LocalHeader({ learnerInfo }: { learnerInfo: any }) {
         }}>
             <View style={{ flex: 1 }}>
                 <ThemedText style={{ fontSize: 16, fontWeight: 'bold' }}>
-                    <ThemedText style={{ fontSize: 18, fontWeight: 'bold', color: '#8B5CF6' }}>📚 Pure Maths App </ThemedText>
+                    <ThemedText style={{ fontSize: 18, fontWeight: 'bold', color: '#8B5CF6' }}>📚 Dimpo Maths App </ThemedText>
                     <ThemedText style={{ fontSize: 18 }}>✨</ThemedText>
                 </ThemedText>
                 <ThemedText style={{ fontSize: 14, color: '#64748B', marginTop: 2 }}>Explore the Joy of Learning! 🎓</ThemedText>
@@ -172,7 +172,7 @@ export default function MathsScreen() {
     const { colors, isDark } = useTheme();
     const { user } = useAuth();
     const params = useLocalSearchParams();
-    const { subjectName, learnerUid, grade, topic, questionId, learningMode } = params;
+    const { subjectName, learnerUid, grade, topic, subtopic, questionId, learningMode } = params;
     const scrollViewRef = React.useRef<ScrollView>(null);
     const progressRef = React.useRef<View>(null);
     const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
@@ -303,10 +303,21 @@ export default function MathsScreen() {
         }
     };
 
-    const fetchQuestionsForTopic = async (topic: string) => {
+    const fetchQuestionsForTopic = async (topicParam: string) => {
         try {
             setIsLoadingQuestion(true);
-            let $url = `${HOST_URL}/api/maths/questions-with-steps-by-topic?topic=${encodeURIComponent(topic)}&grade=${grade}&subject_name=${encodeURIComponent(subjectName as string)}&uid=${learnerUid}`
+            // Use subtopic if available, otherwise use main topic, and ensure it's a string
+            let topicToUse: string;
+            if (subtopic) {
+                topicToUse = Array.isArray(subtopic) ? subtopic[0] : subtopic;
+            } else {
+                topicToUse = Array.isArray(topic) ? topic[0] : (topic as string);
+            }
+            console.log('[FETCH QUESTIONS] Main Topic:', topic);
+            console.log('[FETCH QUESTIONS] Subtopic (if any):', subtopic);
+            console.log('[FETCH QUESTIONS] Passed topic parameter:', topicParam);
+            console.log('[FETCH QUESTIONS] Topic being used in API call:', topicToUse);
+            let $url = `${HOST_URL}/api/maths/questions-with-steps-by-topic?topic=${encodeURIComponent(topicToUse)}&grade=${grade}&subject_name=${encodeURIComponent(subjectName as string)}&uid=${learnerUid}`;
             console.log('[FETCH QUESTIONS] URL:', $url);
             const response = await fetch(
                 $url,
@@ -326,7 +337,7 @@ export default function MathsScreen() {
                 setCurrentQuestionIndex(0);
                 await fetchQuestionDetails(data.question_ids[0]);
             } else {
-                console.log('[FETCH QUESTIONS] No questions found for topic:', topic, 'Response:', data);
+                console.log('[FETCH QUESTIONS] No questions found for topic:', topicToUse, 'Response:', data);
                 Toast.show({
                     type: 'error',
                     text1: 'Error',
@@ -411,6 +422,12 @@ export default function MathsScreen() {
             );
             setShuffledOptions(shuffled);
             setCorrectAnswerIndex(correctIndex);
+            
+            // Log the correct answer when step loads
+            console.log('[STEP LOAD] Step', currentStepIndex + 1, 'of', sortedSteps.length);
+            console.log('[STEP LOAD] Correct answer:', sortedSteps[currentStepIndex].answer);
+            console.log('[STEP LOAD] All options:', sortedSteps[currentStepIndex].options);
+            console.log('[STEP LOAD] Correct option index:', correctIndex);
         } else {
             setShuffledOptions([]);
             setCorrectAnswerIndex(-1);
@@ -430,10 +447,12 @@ export default function MathsScreen() {
         //count number of spaces
         const spaceCount = (text.match(/\s/g) || []).length;
         if (spaceCount === 0) {
+            console.log('[IS LATEX] No spaces found in text:', text);
             return true;
         }
 
         if (uniqueNumbers.size > uniqueAlphabets.size) {
+            console.log('[IS LATEX] Unique numbers > unique alphabets:', text);
             return true;
         }
 
@@ -516,11 +535,17 @@ export default function MathsScreen() {
                         if (part.startsWith('$') && part.endsWith('$')) {
                             //remove new line
                             part = part.replace(/\n/g, '');
+                            
+                            // Count the number of \\ sets in the LaTeX content
+                            const backslashCount = (part.match(/\\\\/g) || []).length;
+                            const height = backslashCount > 0 ? `${60 * backslashCount}px` : undefined;
+                            
                             // LaTeX content
                             return (
                                 <View key={index} style={styles.latexContainer}>
                                     <KaTeX
                                         latex={part.slice(1, -1)} // replace *** with ""
+                                        height={height}
                                     />
                                 </View>
                             );
@@ -754,6 +779,40 @@ export default function MathsScreen() {
         }
     }, [currentStepIndex, selectedOptionIndex, sortedSteps.length, correctAnswersCount, user?.uid, selectedQuestion?.id]);
 
+    // Award 10 points for completing a question (regardless of performance)
+    useEffect(() => {
+        if (
+            currentStepIndex === sortedSteps.length - 1 &&
+            selectedOptionIndex !== null &&
+            sortedSteps.length > 0 &&
+            user?.uid &&
+            selectedQuestion?.id &&
+            !awardedPointsRef.current[`${selectedQuestion.id}_completion`]
+        ) {
+            awardedPointsRef.current[`${selectedQuestion.id}_completion`] = true;
+            fetch(`${HOST_URL}/api/maths/update-maths-points`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid: user.uid, points: 10 })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Question Completed!',
+                        text2: 'You earned 10 points for completing this question! 📚',
+                    });
+                })
+                .catch(() => {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Points Error',
+                        text2: 'Could not award completion points. Please check your connection.',
+                    });
+                });
+        }
+    }, [currentStepIndex, selectedOptionIndex, sortedSteps.length, user?.uid, selectedQuestion?.id]);
+
     useEffect(() => {
         if (
             sortedSteps.length >= 5 &&
@@ -860,6 +919,36 @@ export default function MathsScreen() {
                         contentContainerStyle={styles.contentContainer}
                     >
                         <LocalHeader learnerInfo={learnerInfo} />
+                        
+                        {/* Show remaining questions for free users */}
+                        {learnerInfo?.subscription === 'free' && remainingMathsPractice !== null && (
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: isDark ? '#1E293B' : '#F0FDF4',
+                                borderRadius: 12,
+                                paddingHorizontal: 16,
+                                paddingVertical: 12,
+                                marginHorizontal: 16,
+                                marginBottom: 16,
+                                borderWidth: 1,
+                                borderColor: isDark ? '#334155' : '#BBF7D0',
+                            }}>
+                                <Text style={{ fontSize: 20, marginRight: 8 }}>📚</Text>
+                                <ThemedText style={{ 
+                                    fontSize: 16, 
+                                    fontWeight: '600',
+                                    color: isDark ? '#A7F3D0' : '#15803D'
+                                }}>
+                                    {remainingMathsPractice} question{remainingMathsPractice !== 1 ? 's' : ''} remaining today
+                                </ThemedText>
+                                {remainingMathsPractice <= 5 && (
+                                    <Text style={{ fontSize: 16, marginLeft: 8 }}>⚠️</Text>
+                                )}
+                            </View>
+                        )}
+                        
                         <View style={[styles.content, {
                             backgroundColor: isDark ? colors.card : '#FFFFFF',
                             borderColor: colors.border,
@@ -943,7 +1032,7 @@ export default function MathsScreen() {
                                     <Text style={{ fontSize: 64, marginBottom: 24 }}>🔍</Text>
                                     <ThemedText style={styles.emptyStateTitle}>No Questions Found</ThemedText>
                                     <ThemedText style={styles.emptyStateText}>
-                                        We couldn't find any questions for the topic "{topic}". Please try another topic or contact support if you believe this is an error.
+                                        We couldn't find any questions for the topic "{subtopic ? subtopic : topic}". Please try another topic or contact support if you believe this is an error.
                                     </ThemedText>
                                     <TouchableOpacity
                                         style={[styles.modernButton, { marginTop: 24, width: '100%' }]}
@@ -974,7 +1063,37 @@ export default function MathsScreen() {
                                             marginTop: 4,
                                         }}>
                                             <Text style={{ fontSize: 16, marginRight: 6 }}>📚</Text>
-                                            <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{selectedTopic}</ThemedText>
+                                            <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                                                {subtopic ? subtopic : selectedTopic}
+                                            </ThemedText>
+                                        </View>
+                                    )}
+
+                                    {/* Show remaining questions indicator in steps view */}
+                                    {learnerInfo?.subscription === 'free' && remainingMathsPractice !== null && (
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: remainingMathsPractice <= 3 ? (isDark ? '#7F1D1D' : '#FEF2F2') : (isDark ? '#1E293B' : '#F0FDF4'),
+                                            borderRadius: 12,
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 6,
+                                            marginHorizontal: 16,
+                                            marginBottom: 12,
+                                            borderWidth: 1,
+                                            borderColor: remainingMathsPractice <= 3 ? (isDark ? '#DC2626' : '#FECACA') : (isDark ? '#334155' : '#BBF7D0'),
+                                        }}>
+                                            <Text style={{ fontSize: 14, marginRight: 6 }}>
+                                                {remainingMathsPractice <= 3 ? '⚠️' : '📚'}
+                                            </Text>
+                                            <ThemedText style={{ 
+                                                fontSize: 14, 
+                                                fontWeight: '600',
+                                                color: remainingMathsPractice <= 3 ? (isDark ? '#FCA5A5' : '#DC2626') : (isDark ? '#A7F3D0' : '#15803D')
+                                            }}>
+                                                {remainingMathsPractice} remaining today
+                                            </ThemedText>
                                         </View>
                                     )}
 
@@ -1225,6 +1344,12 @@ export default function MathsScreen() {
                                                                     setSelectedOptionIndex(index);
                                                                     const isCorrect = index === correctAnswerIndex;
 
+                                                                    // Log the correct answer for this step
+                                                                    console.log('[STEP ANSWER] Step', currentStepIndex + 1, 'of', sortedSteps.length);
+                                                                    console.log('[STEP ANSWER] User selected:', option);
+                                                                    console.log('[STEP ANSWER] Correct answer:', sortedSteps[currentStepIndex].answer);
+                                                                    console.log('[STEP ANSWER] Is correct:', isCorrect);
+
                                                                     // Play appropriate sound
                                                                     if (isCorrect) {
                                                                         playSound(correctSound);
@@ -1248,7 +1373,7 @@ export default function MathsScreen() {
 
                                                                     // If this is the last step, update daily usage
                                                                     if (currentStepIndex === sortedSteps.length - 1) {
-                                                                        fetch(`${HOST_URL}/api/learner/daily-usage/maths-practice?uid=${user?.uid}`, {
+                                                                        fetch(`${HOST_URL}/api/learner/daily-usage/maths-practice?uid=${user?.uid}&question_id=${questionIds[currentQuestionIndex]}`, {
                                                                             method: 'POST',
                                                                             headers: {
                                                                                 'Content-Type': 'application/json'
@@ -1310,7 +1435,7 @@ export default function MathsScreen() {
                                                         <ThemedText style={{ fontSize: 18, textAlign: 'center', color: isDark ? '#A7F3D0' : '#15803D', fontWeight: '600' }}>
                                                             You've completed this question! Great job!
                                                         </ThemedText>
-                                                        <ThemedText style={{ fontSize: 14, textAlign: 'center', color: isDark ? '#94A3B8' : '#166534', marginTop: 4 }}>
+                                                        <ThemedText style={{ fontSize: 14, textAlign: 'center', color: isDark ? '#94A3B8' : '#64748B', marginTop: 4 }}>
                                                             Ready for the next challenge?
                                                         </ThemedText>
                                                         {justAwardedPoints && (

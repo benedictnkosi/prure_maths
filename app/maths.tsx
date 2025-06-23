@@ -408,6 +408,7 @@ export default function MathsScreen() {
             });
 
             console.log('[FETCH QUESTION DETAILS] context:', data.context);
+            console.log('[FETCH QUESTION DETAILS] question:', data.question);
             setSelectedQuestion(data);
             fetchDailyUsage();
         } catch (error) {
@@ -572,8 +573,14 @@ export default function MathsScreen() {
             return (
                 <View style={styles.mixedContentContainer}>
                     {parts.map((part, index) => {
+                        let isBuildingLatex = false;
                         if (part.startsWith('$') && part.endsWith('$')) {
                             console.log('[RENDER MIXED CONTENT] Part:', part);
+                            // is next part starting with or?
+                            if (parts[index + 1] && parts[index + 1].startsWith('or')) {
+                                isBuildingLatex = true;
+                            }
+                            isBuildingLatex = true;
                             //remove new line
                             part = part.replace(/\n/g, '');
                             //replace \\sqrt with \sqrt
@@ -597,17 +604,48 @@ export default function MathsScreen() {
 
                             const backslashCount = (part.match(/\\\\/g) || []).length;
                             const height = backslashCount > 0 ? `${60 * backslashCount}px` : undefined;
-                            
+                                
+                            let returnText = part.slice(1, -1);
+                            if (parts[index + 1] && parts[index + 1].trim().startsWith('or')) {
+                                const newPart = part.slice(0, -1) + '\\text{';
+                                const lastPart = parts[index + 2].slice(1);
+                                returnText = newPart + parts[index + 1] + "}" + lastPart
+                                console.log('[RENDER MIXED CONTENT] or found', returnText);
+                            }else{
+                                console.log('[RENDER MIXED CONTENT] no or found', parts[index + 1]);
+                            }
+                            // Strip leading and trailing $ if present
+                            if (returnText.startsWith('$') && returnText.endsWith('$')) {
+                                returnText = returnText.slice(1, -1);
+                            }
+                            console.log('KaTeX input:', returnText);
+
+                            if (parts[index - 1] && parts[index - 1].trim().startsWith('or')) {
+                                return '';
+                            }
+
                             // LaTeX content
                             return (
                                 <View key={index} style={styles.latexContainer}>
                                     <KaTeX
-                                        latex={part.slice(1, -1)} // replace *** with ""
+                                        latex={returnText} // replace *** with ""
                                         height={height}
                                     />
                                 </View>
                             );
                         } else {
+                            if (part.trim().startsWith('or')) {
+                                console.log('starts with or', part.trim());
+                                return '';
+                            }
+
+                            //if part start with a , then remove the first character
+                            if (part.trim().startsWith(',') || part.trim().startsWith('.')) {
+                                part = part.slice(1);
+                            }
+
+                            //if part start with a , then remove the first character
+                            
                             // Always use fontSize 14 for question, context, and hint
                             return (
                                 <ThemedText key={index} style={[styles.contentText, { color: colors.text, fontSize: 14, lineHeight: 22 }]}> 

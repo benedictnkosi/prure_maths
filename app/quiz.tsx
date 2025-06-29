@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Audio } from 'expo-av';
 import * as StoreReview from 'expo-store-review';
 import Purchases from 'react-native-purchases';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
@@ -17,7 +18,6 @@ import { API_BASE_URL, HOST_URL } from '../config/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BadgeCelebrationModal } from '@/components/BadgeCelebrationModal';
 import { StreakModal, ReportModal, ExplanationModal, ZoomModal, RestartModal, ThankYouModal } from '@/app/components/quiz/quiz-modals';
 import { FeedbackContainer } from '@/app/components/quiz/FeedbackContainer';
@@ -35,6 +35,7 @@ import { TopicProgressBar } from './components/quiz/TopicProgressBar';
 import { FirstAnswerPointsModal } from './components/quiz/FirstAnswerPointsModal';
 import { Paywall } from './components/Paywall';
 import { getLearner } from '../services/api';
+import { analytics } from '../services/analytics';
 
 interface Question {
     id: number;
@@ -1547,6 +1548,26 @@ export default function QuizScreen() {
 
     const handleAnswer = async (answer: string, options?: { sheet_cell: string }) => {
         if (!user?.uid || !currentQuestion) return;
+
+        // Use AsyncStorage to track if the first attempt for this question has been logged
+        if (selectedAnswer === null) {
+            const analyticsKey = `quiz_attempt_logged`;
+            try {
+                const alreadyLogged = await AsyncStorage.getItem(analyticsKey);
+                if (!alreadyLogged) {
+                    await analytics.track('Quiz Attempt', {
+                        userId: user?.uid,
+                        questionId: currentQuestion.id,
+                        selectedOption: answer,
+                        correctAnswer: currentQuestion.answer,
+                        isCorrect: answer === currentQuestion.answer,
+                    });
+                    await AsyncStorage.setItem(analyticsKey, 'true');
+                }
+            } catch (e) {
+                // fail silently
+            }
+        }
 
         // Set flag to indicate answers were submitted
         await AsyncStorage.setItem('hasNewAnswers', 'true');

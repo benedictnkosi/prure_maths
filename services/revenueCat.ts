@@ -1,12 +1,11 @@
-import Purchases, { CustomerInfo, PurchasesOffering, PurchasesPackage, PurchasesStoreProduct } from 'react-native-purchases';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import Purchases, { CustomerInfo, PurchasesOffering, PurchasesPackage, PurchasesStoreProduct } from 'react-native-purchases';
 import RevenueCatUI from 'react-native-purchases-ui';
 
 // Replace these with your actual API keys from RevenueCat dashboard
 const REVENUECAT_API_KEYS = {
-    ios: 'appl_rwZztyiUVAGXLSboKzMKIMbmpOR',
-    android: 'goog_SWSvLARcIgshQTrQILYKLckgcxC',
+    ios: 'appl_xWZdqnqkHoQwozLbKzXhaYToOjR',
+    android: 'goog_dDaRyxImQJkoAHxfPwAObkkberf',
 };
 
 interface RevenueCatConfig {

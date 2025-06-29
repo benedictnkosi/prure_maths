@@ -22,12 +22,12 @@ cd android
 # Build release APK
 ./gradlew assembleRelease
 
-APK_PATH="$(pwd)/app/build/outputs/apk/release/app-release.apk"
-BACKUP_DIR="/Users/mac1/Documents/ExamQuiz/backups/apk"
+APK_PATH="$(pwd)/app/build/outputs/apk/release/maths-release.apk"
+BACKUP_DIR="/Users/benedictnkosi/Documents/Dimpo Learning Assets"
 
 # Check if build was successful
 if [ -f "$APK_PATH" ]; then
-    cp "$APK_PATH" "$BACKUP_DIR/app-release.apk"
+    cp "$APK_PATH" "$BACKUP_DIR/maths-release.apk"
     echo "Copied to $BACKUP_DIR successfully!"
 else
     echo "❌ APK not found at: $APK_PATH"

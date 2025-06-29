@@ -6,17 +6,18 @@ import { ThemedText } from '@/components/ThemedText';
 import { useState, useEffect } from 'react';
 import Toast from 'react-native-toast-message';
 import Modal from 'react-native-modal';
-import { LessonHeader } from '@/components/LessonHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, TouchableOpacity, ScrollView, TextInput, Platform, StyleSheet, Linking } from 'react-native';
+import { View, TouchableOpacity, ScrollView, TextInput, Platform, StyleSheet, Linking, Switch } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import React from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { HOST_URL } from '@/config/api';
 import { Header } from '@/components/Header';
+import { UpgradeToProButton } from '../components/UpgradeToProButton';
+import { Paywall } from '../components/Paywall';
+
 
 interface ProfileInfo {
   name: string;
@@ -26,6 +27,7 @@ interface ProfileInfo {
     number: number;
     active: number;
   };
+  subscription?: string;
 }
 
 // Level to Grade mapping
@@ -51,52 +53,60 @@ export default function ProfileScreen() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
+
+  const fetchLearnerData = async () => {
+    try {
+      const authData = await SecureStore.getItemAsync('auth');
+      if (!authData) {
+        throw new Error('No auth data found');
+      }
+      const { user } = JSON.parse(authData);
+
+      const response = await fetch(`${HOST_URL}/public/learn/learner?uid=${user.uid}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch learner data');
+      }
+
+      const learnerData = await response.json();
+      console.log('Full learner data:', JSON.stringify(learnerData, null, 2));
+      console.log('Grade data:', learnerData.grade);
+
+      setProfileInfo({
+        name: learnerData.name,
+        email: user?.email || '',
+        grade: learnerData.grade,
+        subscription: learnerData.subscription || 'free',
+      });
+      console.log('Profile info set:', {
+        name: learnerData.name,
+        email: user?.email || '',
+        grade: learnerData.grade,
+        subscription: learnerData.subscription || 'free',
+      });
+      setEditName(learnerData.name);
+      setEditLevel(GRADE_TO_LEVEL[learnerData.grade?.number as number] || undefined);
+    } catch (error) {
+      console.error('Error fetching learner data:', error);
+    }
+  };
 
   useEffect(() => {
-    async function fetchLearnerData() {
+    async function loadSoundSetting() {
       try {
-        const authData = await SecureStore.getItemAsync('auth');
-        if (!authData) {
-          throw new Error('No auth data found');
-        }
-        const { user } = JSON.parse(authData);
-
-        const response = await fetch(`${HOST_URL}/public/learn/learner?uid=${user.uid}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch learner data');
-        }
-
-        const learnerData = await response.json();
-        console.log('Full learner data:', JSON.stringify(learnerData, null, 2));
-        console.log('Grade data:', learnerData.grade);
-
-        setProfileInfo({
-          name: learnerData.name,
-          email: user?.email || '',
-          grade: learnerData.grade
-        });
-        console.log('Profile info set:', {
-          name: learnerData.name,
-          email: user?.email || '',
-          grade: learnerData.grade
-        });
-        setEditName(learnerData.name);
-        setEditLevel(GRADE_TO_LEVEL[learnerData.grade?.number as number] || undefined);
+        const soundSetting = await AsyncStorage.getItem('soundEnabled');
+        // Default to true if no setting is stored
+        setSoundEnabled(soundSetting === null ? true : soundSetting === 'true');
       } catch (error) {
-        console.error('Error fetching learner data:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to load profile data',
-          position: 'top',
-          topOffset: 60,
-          visibilityTime: 3000,
-          autoHide: true
-        });
+        console.error('Error loading sound setting:', error);
+        setSoundEnabled(true); // Default to enabled on error
       }
     }
 
     fetchLearnerData();
+    loadSoundSetting();
   }, [user?.email]);
 
   const handleSave = async () => {
@@ -198,7 +208,8 @@ export default function ProfileScreen() {
           setProfileInfo({
             name: learnerData.name,
             email: user?.email || '',
-            grade: learnerData.grade
+            grade: learnerData.grade,
+            subscription: learnerData.subscription || 'free',
           });
           setEditName(learnerData.name);
           setEditLevel(GRADE_TO_LEVEL[learnerData.grade?.number as number] || undefined);
@@ -267,6 +278,33 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSoundToggle = async (value: boolean) => {
+    try {
+      setSoundEnabled(value);
+      await AsyncStorage.setItem('soundEnabled', value.toString());
+      Toast.show({
+        type: 'success',
+        text1: value ? 'Sounds Enabled' : 'Sounds Disabled',
+        text2: value ? 'Answer sounds are now on' : 'Answer sounds are now off',
+        position: 'top',
+        topOffset: 60,
+        visibilityTime: 2000,
+        autoHide: true
+      });
+    } catch (error) {
+      console.error('Error saving sound setting:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to save sound setting',
+        position: 'top',
+        topOffset: 60,
+        visibilityTime: 3000,
+        autoHide: true
+      });
+    }
+  };
+
   console.log('Current profileInfo state:', profileInfo);
 
   return (
@@ -282,6 +320,26 @@ export default function ProfileScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Header />
+
+        {/* Upgrade to Pro marketing section (only for free users) */}
+        {profileInfo?.subscription === 'free' && (
+          <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 8, color: colors.primary }}>
+              Unlock Your Full Potential!
+            </ThemedText>
+            <ThemedText style={{ fontSize: 15, textAlign: 'center', marginBottom: 12, color: colors.textSecondary }}>
+              Upgrade to Pro for unlimited quizzes and practice. Invest in your success today!
+            </ThemedText>
+            <UpgradeToProButton
+                style={styles.upgradeButton}
+                onPress={() => {
+                  setIsUpgradeLoading(true);
+                  setShowPaywall(true);
+                }}
+                loading={isUpgradeLoading}
+              />
+          </View>
+        )}
 
         <ThemedView style={styles.content}>
           <ThemedView style={[styles.profileCard, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
@@ -317,6 +375,23 @@ export default function ProfileScreen() {
                 <ThemedText style={[styles.email, { color: colors.textSecondary, marginTop: 8 }]}>
                   {user?.email}
                 </ThemedText>
+
+                {/* Sound Toggle */}
+                <View style={styles.settingRow}>
+                  <View style={styles.settingInfo}>
+                    <ThemedText style={[styles.settingLabel, { color: colors.text }]}>Answer Sounds</ThemedText>
+                    <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                      Play sounds for correct and incorrect answers
+                    </ThemedText>
+                  </View>
+                  <Switch
+                    value={soundEnabled}
+                    onValueChange={handleSoundToggle}
+                    trackColor={{ false: isDark ? '#475569' : '#CBD5E1', true: colors.primary }}
+                    thumbColor={soundEnabled ? '#FFFFFF' : (isDark ? '#94A3B8' : '#F1F5F9')}
+                    ios_backgroundColor={isDark ? '#475569' : '#CBD5E1'}
+                  />
+                </View>
 
               </View>
 
@@ -387,6 +462,22 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </ThemedView>
       </ScrollView>
+
+      {showPaywall && (
+        <Paywall
+          onSuccess={() => {
+            setShowPaywall(false);
+            setIsUpgradeLoading(false);
+            // Refresh profile data after successful upgrade
+            fetchLearnerData();
+          }}
+          onClose={() => {
+            setShowPaywall(false);
+            setIsUpgradeLoading(false);
+          }}
+        />
+      )}
+
 
       <Modal
         isVisible={showDeleteModal}
@@ -669,5 +760,29 @@ const styles = StyleSheet.create({
   grade: {
     fontSize: 16,
     marginTop: 4,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  upgradeButton: {
+    marginHorizontal: 0,
+    marginVertical: 0,
   },
 }); 

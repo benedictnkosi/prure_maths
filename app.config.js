@@ -1,10 +1,10 @@
 export default {
   name: 'Dimpo Maths',
-  slug: 'dimpo-maths',
+  slug: 'exam-quiz',
   version: '1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'dimpo-maths',
+  scheme: 'exam-quiz',
   userInterfaceStyle: 'automatic',
   newArchEnabled: false,
   ios: {

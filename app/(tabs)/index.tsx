@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Pressable, ActivityIndicator, View, ScrollView, Share, Platform } from 'react-native';
+import { StyleSheet, Pressable, ActivityIndicator, View, ScrollView, Share, Platform, Modal } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,103 +19,63 @@ const LEARNING_MODES = [
   { id: 'quiz', label: 'Quiz', emoji: '🎯', description: 'Test your knowledge' }
 ];
 
-// Available subjects - now dynamic based on grade
-const getAvailableSubjects = (grade: number | null) => {
-  const allSubjects = [
-    { label: 'Mathematics', value: 'Mathematics' },
-    { label: 'Applied Maths	', value: 'Technical Mathematics' },
-  ];
-  
-  // Hide Technical Mathematics for grades 8 and 9 (level 1 and 2)
-  if (grade === 8 || grade === 9) {
-    return allSubjects.filter(subject => subject.value !== 'Technical Mathematics');
-  }
-  
-  return allSubjects;
-};
-
-// Subject emojis
-const SUBJECT_EMOJIS: Record<string, string> = {
-  'Mathematics': '📐',
-  'Technical Mathematics': '🔧',
-};
-
-// Subject colors
-const SUBJECT_COLORS: Record<string, { light: string; dark: string }> = {
-  'Mathematics': { light: '#E0E7FF', dark: '#3730A3' },
-  'Technical Mathematics': { light: '#FDE68A', dark: '#92400E' },
-};
 
 // Math topic emojis
 const TOPIC_EMOJIS: Record<string, string> = {
+  'Algebra': '🧮',
+  'Algebra and Equations': '➗',
   'Analytical Geometry': '📏',
-  'Counting and probability': '🎲',
-  'Differential Calculus, including polynomials': '📉',
-  'Euclidean Geometry': '📐',
-  'Finance, growth and decay (continuation)': '💹',
-  'Functions: Formal definition, inverses, exponential and logarithmic': '📈',
-  'Number patterns, sequences and series': '🔢',
-  'Statistics': '📊',
-  'Trigonometry': '📐',
-  'Equations and Inequalities': '➗',
-  'Exponents and Surds': '🧮',
-  'Functions (Including Trigonometric Functions)': '📈',
-  'Number Patterns': '🔢',
-  'Trigonometry (Reduction Formulae, Trig Equations & General Solutions)': '📐',
-  'Trigonometry (Sine, Cosine and Area Rules)': '📏',
-  'Algebraic Expressions': '🧮',
-  'Exponents, Equations and Inequalities': '➗',
-  'Finance and Growth': '💹',
-  'Functions and Graphs (Including Trigonometric Functions)': '📈',
-  'Measurement': '📏',
+  'Calculus': '∫',
+  'Finance': '💰',
+  'Finance and Growth': '📈',
+  'Functions': '📊',
+  'Functions and Graphs': '📉',
+  'Measurement and Conversions': '📐',
+  'Mensuration and Geometry': '🔺',
   'Probability': '🎲',
-  'Algebraic Equations': '➗',
-  'Exponents': '🧮',
-  'Geometry of 2D Shapes and Construction': '📐',
-  'Geometry of Straight Lines': '📏',
+  'Sequences and Series': '🔢',
+  'Statistics': '📊',
+  'Trigonometry': '🧭',
+  'Vectors': '🧲',
+  'Vectors and Motion': '🏹',
+  'Euclidean Geometry': '🟦',
+  'Measurement': '📏',
+  'Number Patterns': '🔢',
+  'Geometry': '📐',
+  'Graphs': '📈',
+  'Data Handling (Statistics)': '📊',
+  'Fractions, Decimals and Percentages': '¼',
   'Integers': '🔢',
-  'Numeric and Geometric Patterns': '🔢',
-  'Whole Numbers': '🔢',
-  'Complex Numbers': '🔢',
-  'Differential Calculus': '📉',
-  'Integration': '➕',
-  'Polynomials': '🧮',
+  'Patterns and Sequences': '🔗',
 };
 
 // Unique color for each topic card - updated for dark mode compatibility
 const TOPIC_COLORS: Record<string, { light: string; dark: string }> = {
+  'Algebra': { light: '#FDE68A', dark: '#B45309' },
+  'Algebra and Equations': { light: '#FCA5A5', dark: '#991B1B' },
   'Analytical Geometry': { light: '#C7D2FE', dark: '#1E3A8A' },
-  'Counting and probability': { light: '#FEF3C7', dark: '#92400E' },
-  'Differential Calculus, including polynomials': { light: '#F3E8FF', dark: '#6B21A8' },
-  'Euclidean Geometry': { light: '#F3F4F6', dark: '#374151' },
-  'Finance, growth and decay (continuation)': { light: '#C7F9CC', dark: '#14532D' },
-  'Functions: Formal definition, inverses, exponential and logarithmic': { light: '#F3E8FF', dark: '#6B21A8' },
-  'Number patterns, sequences and series': { light: '#DBEAFE', dark: '#1E40AF' },
-  'Statistics': { light: '#DCFCE7', dark: '#166534' },
-  'Trigonometry': { light: '#FCE7F3', dark: '#831843' },
-  'Equations and Inequalities': { light: '#FDE68A', dark: '#92400E' },
-  'Exponents and Surds': { light: '#FBCFE8', dark: '#9D174D' },
-  'Functions (Including Trigonometric Functions)': { light: '#F3E8FF', dark: '#6B21A8' },
-  'Number Patterns': { light: '#DBEAFE', dark: '#1E40AF' },
-  'Trigonometry (Reduction Formulae, Trig Equations & General Solutions)': { light: '#FCE7F3', dark: '#831843' },
-  'Trigonometry (Sine, Cosine and Area Rules)': { light: '#E0E7FF', dark: '#3730A3' },
-  'Algebraic Expressions': { light: '#FDE68A', dark: '#92400E' },
-  'Exponents, Equations and Inequalities': { light: '#E0E7FF', dark: '#3730A3' },
-  'Finance and Growth': { light: '#C7F9CC', dark: '#14532D' },
-  'Functions and Graphs (Including Trigonometric Functions)': { light: '#F3E8FF', dark: '#6B21A8' },
-  'Measurement': { light: '#FECACA', dark: '#991B1B' },
-  'Probability': { light: '#FEF3C7', dark: '#92400E' },
-  'Algebraic Equations': { light: '#E0E7FF', dark: '#3730A3' },
-  'Exponents': { light: '#FBCFE8', dark: '#9D174D' },
-  'Geometry of 2D Shapes and Construction': { light: '#F3F4F6', dark: '#374151' },
-  'Geometry of Straight Lines': { light: '#C7D2FE', dark: '#1E3A8A' },
-  'Integers': { light: '#FDE68A', dark: '#92400E' },
-  'Numeric and Geometric Patterns': { light: '#DBEAFE', dark: '#1E40AF' },
-  'Whole Numbers': { light: '#DCFCE7', dark: '#166534' },
-  'Complex Numbers': { light: '#F3E8FF', dark: '#6B21A8' },
-  'Differential Calculus': { light: '#FBCFE8', dark: '#9D174D' },
-  'Integration': { light: '#C7F9CC', dark: '#14532D' },
-  'Polynomials': { light: '#FDE68A', dark: '#92400E' },
+  'Calculus': { light: '#A7F3D0', dark: '#065F46' },
+  'Finance': { light: '#F9FA8A', dark: '#A16207' },
+  'Finance and Growth': { light: '#FDE68A', dark: '#92400E' },
+  'Functions': { light: '#FBCFE8', dark: '#831843' },
+  'Functions and Graphs': { light: '#A5B4FC', dark: '#3730A3' },
+  'Measurement and Conversions': { light: '#F3F4F6', dark: '#374151' },
+  'Mensuration and Geometry': { light: '#FCD34D', dark: '#92400E' },
+  'Probability': { light: '#FCA5A5', dark: '#991B1B' },
+  'Sequences and Series': { light: '#6EE7B7', dark: '#065F46' },
+  'Statistics': { light: '#F9A8D4', dark: '#831843' },
+  'Trigonometry': { light: '#FDE68A', dark: '#92400E' },
+  'Vectors': { light: '#A7F3D0', dark: '#065F46' },
+  'Vectors and Motion': { light: '#F3F4F6', dark: '#374151' },
+  'Euclidean Geometry': { light: '#B6E0FE', dark: '#155E75' },
+  'Measurement': { light: '#FDE68A', dark: '#B45309' },
+  'Number Patterns': { light: '#A5B4FC', dark: '#3730A3' },
+  'Geometry': { light: '#FCD34D', dark: '#92400E' },
+  'Graphs': { light: '#A7F3D0', dark: '#065F46' },
+  'Data Handling (Statistics)': { light: '#F9A8D4', dark: '#831843' },
+  'Fractions, Decimals and Percentages': { light: '#FDE68A', dark: '#B45309' },
+  'Integers': { light: '#A5B4FC', dark: '#3730A3' },
+  'Patterns and Sequences': { light: '#6EE7B7', dark: '#065F46' },
 };
 
 // Grade to Level mapping
@@ -140,11 +100,12 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingGrade, setIsLoadingGrade] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>('Mathematics');
   const [learnerGrade, setLearnerGrade] = useState<number | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<MathTopic | null>(null);
   const [showSubtopics, setShowSubtopics] = useState(false);
   const [selectedLearningMode, setSelectedLearningMode] = useState<string | null>(null);
+  const [modeModalVisible, setModeModalVisible] = useState(false);
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
@@ -185,33 +146,18 @@ export default function HomeScreen() {
 
       fetchLearnerData();
 
-      // Load last selected learning mode and subject every time screen comes into focus
+      // Load last selected learning mode every time screen comes into focus
       const loadLastSelections = async () => {
         try {
-          const [storedMode, storedSubject] = await Promise.all([
-            AsyncStorage.getItem('lastLearningMode'),
-            AsyncStorage.getItem('lastSelectedSubject')
-          ]);
+          const storedMode = await AsyncStorage.getItem('lastLearningMode');
           
           if (storedMode && LEARNING_MODES.some(mode => mode.id === storedMode)) {
             setSelectedLearningMode(storedMode);
           }
 
-          // For grade 8/9, always set subject to Mathematics
-          if ((learnerGrade === 8 || learnerGrade === 9)) {
-            setSelectedSubject('Mathematics');
-            fetchTopics('Mathematics');
-          } else if (storedSubject && learnerGrade && getAvailableSubjects(learnerGrade).some(subject => subject.value === storedSubject)) {
-            setSelectedSubject(storedSubject);
-            fetchTopics(storedSubject);
-          } else if (storedSubject && !learnerGrade) {
-            // If we have a stored subject but no grade yet, set it anyway and let the useEffect handle fetching
-            setSelectedSubject(storedSubject);
-          } else {
-            // No stored subject or invalid subject for current grade - reset to null
-            setSelectedSubject(null);
-            setTopics([]);
-          }
+          // Always set subject to Mathematics and fetch topics
+          setSelectedSubject('Mathematics');
+          fetchTopics('Mathematics');
         } catch (e) {
           // Ignore errors
         }
@@ -225,16 +171,15 @@ export default function HomeScreen() {
         setSelectedLearningMode(passedLearningMode);
       }
 
-      // Auto-set subject if passed
-      if (passedSubject && getAvailableSubjects(learnerGrade).some(subject => subject.value === passedSubject)) {
+      // Auto-set subject if passed (though we always default to Mathematics)
+      if (passedSubject && passedSubject === 'Mathematics') {
         console.log('Auto-setting subject to:', passedSubject);
         setSelectedSubject(passedSubject);
         fetchTopics(passedSubject);
       }
 
-      // Reset to subjects view when tab is focused (only if no parameters passed)
+      // Reset to topics view when tab is focused (only if no parameters passed)
       if (!passedLearningMode && !passedSubject && !passedTopic) {
-        // Don't reset subject here - let loadLastSelections handle it
         setTopics([]);
         setError(null);
         setSelectedTopic(null);
@@ -259,7 +204,7 @@ export default function HomeScreen() {
   // Retry fetching topics when learner grade becomes available
   useEffect(() => {
     if (learnerGrade && selectedSubject && topics.length === 0 && !isLoading) {
-      console.log('Retrying to fetch topics for stored subject:', selectedSubject);
+      console.log('Retrying to fetch topics for Mathematics');
       fetchTopics(selectedSubject);
     }
   }, [learnerGrade, selectedSubject]);
@@ -287,16 +232,6 @@ export default function HomeScreen() {
     }
   }
 
-  const handleSubjectPress = async (subject: string) => {
-    setSelectedSubject(subject);
-    try {
-      await AsyncStorage.setItem('lastSelectedSubject', subject);
-    } catch (e) {
-      // Ignore errors
-    }
-    fetchTopics(subject);
-  };
-
   const handleLearningModeSelect = async (modeId: string) => {
     setSelectedLearningMode(modeId);
     try {
@@ -305,28 +240,15 @@ export default function HomeScreen() {
       // Ignore errors
     }
     
-    // For grade 8/9, automatically set subject to Mathematics and fetch topics
-    if ((learnerGrade === 8 || learnerGrade === 9) && !selectedSubject) {
-      setSelectedSubject('Mathematics');
-      try {
-        await AsyncStorage.setItem('lastSelectedSubject', 'Mathematics');
-      } catch (e) {
-        // Ignore errors
-      }
-      fetchTopics('Mathematics');
-    }
+    // Always set subject to Mathematics and fetch topics
+    setSelectedSubject('Mathematics');
+    fetchTopics('Mathematics');
   };
 
   const handleBackToSubjects = async () => {
-    setSelectedSubject(null);
+    setSelectedSubject('Mathematics');
     setTopics([]);
     setError(null);
-    // Clear stored subject when manually going back
-    try {
-      await AsyncStorage.removeItem('lastSelectedSubject');
-    } catch (e) {
-      // Ignore errors
-    }
     // setSelectedLearningMode(null);
     try {
       const storedMode = await AsyncStorage.getItem('lastLearningMode');
@@ -660,6 +582,38 @@ Download now:
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
       <Header />
+      {/* View Report Button - always visible if user is logged in */}
+      {user?.uid && (
+        <Pressable
+          style={({ pressed }) => [
+            {
+              marginHorizontal: 20,
+              marginTop: 16,
+              marginBottom: 8,
+              paddingVertical: 14,
+              borderRadius: 12,
+              backgroundColor: isDark ? colors.primary : '#6366F1',
+              alignItems: 'center',
+              opacity: pressed ? 0.85 : 1,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+            },
+          ]}
+          onPress={() => {
+            router.push({
+              pathname: '/report/[uid]',
+              params: { uid: user.uid, name: user.displayName || 'Me' },
+            });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="View my performance report"
+        >
+          <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+            🏆 View My Report
+          </ThemedText>
+        </Pressable>
+      )}
       <ThemedView style={styles.container}>
         {/* View My Report Button and Share App Button - only show if no subject is selected */}
         {!selectedSubject && (
@@ -733,14 +687,47 @@ Download now:
             <ActivityIndicator size="large" color={colors.primary} />
             <ThemedText style={styles.loadingText}>Loading your grade level...</ThemedText>
           </View>
-        ) : selectedSubject ? (
+        ) : selectedLearningMode ? (
           // Show topics for selected subject
           <>
+            {/* Learning mode selection as cards/buttons above topics */}
+            <ThemedView style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 8, marginBottom: 16, paddingHorizontal: 20 }}>
+              {LEARNING_MODES.map((mode) => (
+                <Pressable
+                  key={mode.id}
+                  style={({ pressed }) => [
+                    styles.learningModeCard,
+                    {
+                      backgroundColor: selectedLearningMode === mode.id
+                        ? (isDark ? colors.primary : colors.primary + '10')
+                        : (isDark ? colors.surface : '#F8F9FA'),
+                      borderColor: selectedLearningMode === mode.id ? colors.primary : 'transparent',
+                      opacity: pressed ? 0.8 : 1,
+                    },
+                  ]}
+                  onPress={async () => {
+                    setSelectedLearningMode(mode.id);
+                    // Always set subject to Mathematics and fetch topics
+                    setSelectedSubject('Mathematics');
+                    fetchTopics('Mathematics');
+                    try {
+                      await AsyncStorage.setItem('lastLearningMode', mode.id);
+                    } catch {}
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${mode.label} mode`}
+                >
+                  <ThemedText style={styles.learningModeEmoji}>{mode.emoji}</ThemedText>
+                  <ThemedText style={styles.learningModeLabel}>{mode.label}</ThemedText>
+                  <ThemedText style={styles.learningModeDescription}>{mode.description}</ThemedText>
+                </Pressable>
+              ))}
+            </ThemedView>
             {showSubtopics && selectedTopic && selectedLearningMode === 'practice' ? (
               <>
                 <Pressable style={styles.backButton} onPress={handleBackToTopics}>
                   <ThemedText style={{ fontSize: 20 }}>←</ThemedText>
-                  <ThemedText style={styles.backButtonText}>Back to Topics</ThemedText>
+                  <ThemedText style={styles.backButtonText}>Back</ThemedText>
                 </Pressable>
                 <ThemedView style={styles.topicsContainer}>
                   <ThemedText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, color: colors.text }}>
@@ -780,11 +767,6 @@ Download now:
               </>
             ) : (
               <>
-                <Pressable style={styles.backButton} onPress={handleBackToSubjects}>
-                  <ThemedText style={{ fontSize: 20 }}>←</ThemedText>
-                  <ThemedText style={styles.backButtonText}>Back</ThemedText>
-                </Pressable>
-
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
@@ -838,7 +820,7 @@ Download now:
             )}
           </>
         ) : (
-          // Show learning mode selection and subject selection
+          // Show learning mode selection
           <>
             {learnerGrade && (
               <ThemedView style={{ paddingHorizontal: 20, paddingBottom: 16, alignItems: 'center' }}>
@@ -856,7 +838,7 @@ Download now:
                   textAlign: 'center',
                   opacity: 0.8
                 }}>
-                  Choose your learning mode and subject
+                  Choose your learning mode
                 </ThemedText>
               </ThemedView>
             )}
@@ -895,46 +877,6 @@ Download now:
                 ))}
               </View>
             </ThemedView>
-
-            <ThemedText style={styles.learningModeTitle}>
-              {/* Hide subject selection for grade 8/9 */}
-              {learnerGrade === 8 || learnerGrade === 9 ? null : 'Choose Subject'}
-            </ThemedText>
-            {/* Subject Selection */}
-            {!(learnerGrade === 8 || learnerGrade === 9) && (
-              <ThemedView style={styles.subjectsContainer}>
-                {getAvailableSubjects(learnerGrade).map((subject) => (
-                  <Pressable
-                    key={subject.value}
-                    style={({ pressed }) => [
-                      [
-                        styles.subjectCard,
-                        {
-                          backgroundColor: SUBJECT_COLORS[subject.value]
-                            ? (isDark
-                              ? SUBJECT_COLORS[subject.value].dark
-                              : SUBJECT_COLORS[subject.value].light)
-                            : colors.surface,
-                          opacity: selectedLearningMode ? 1 : 0.5,
-                        },
-                      ],
-                      pressed && styles.subjectCardPressed,
-                    ]}
-                    onPress={() => handleSubjectPress(subject.value)}
-                    disabled={!selectedLearningMode}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select ${subject.label}`}
-                  >
-                    <ThemedText style={styles.subjectEmoji}>
-                      {SUBJECT_EMOJIS[subject.value] || '📚'}
-                    </ThemedText>
-                    <ThemedText style={styles.subjectName}>
-                      {subject.label}
-                    </ThemedText>
-                  </Pressable>
-                ))}
-              </ThemedView>
-            )}
           </>
         )}
       </ThemedView>

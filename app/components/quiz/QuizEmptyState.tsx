@@ -145,9 +145,9 @@ You can check it out here:
                         <ThemedText style={[styles.noQuestionsSubtitle, { color: colors.textSecondary }]}>
                             {isQuizLimitReached
                                 ? mode === 'lessons'
-                                    ? "🚀 Go unlimited with Pro to unlock unlimited lessons, step-by-step maths, and audio lessons — anytime."
-                                    : "🚀 Go unlimited with Pro to unlock unlimited quizzes, step-by-step maths, and audio lessons — anytime."
-                                : "Check your profile settings and make sure you've selected the right subjects and school terms so Dimpo can fetch the right quizzes! 🎯"
+                                    ? "🚀 Go unlimited with Pro to unlock unlimited lessons and step-by-step maths — anytime."
+                                    : "🚀 Go unlimited with Pro to unlock unlimited quizzes and step-by-step maths — anytime."
+                                : "Dimpo can't fetch the questions right now! 🎯"
                             }
                         </ThemedText>
 

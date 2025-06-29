@@ -1,59 +1,42 @@
-import React, { useState } from 'react';
-import { TouchableOpacity, View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ThemedText } from './ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Paywall } from './Paywall';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { ThemedText } from './ThemedText';
 
 interface UpgradeToProButtonProps {
     style?: StyleProp<ViewStyle>;
     text?: string;
-    onSuccess?: () => void;
-    onClose?: () => void;
+    onPress?: () => void;
+    loading?: boolean;
 }
 
-export function UpgradeToProButton({ style, text = 'Upgrade to Pro', onSuccess, onClose }: UpgradeToProButtonProps) {
-    const { isDark, colors } = useTheme();
-    const [showPaywall, setShowPaywall] = useState(false);
-
-    function handlePress() {
-        setShowPaywall(true);
-    }
-
-    function handlePaywallSuccess() {
-        setShowPaywall(false);
-        onSuccess?.();
-    }
-
-    function handlePaywallClose() {
-        setShowPaywall(false);
-        onClose?.();
-    }
+export function UpgradeToProButton({ style, text = 'Upgrade to Pro', onPress, loading = false }: UpgradeToProButtonProps) {
+    const { isDark } = useTheme();
 
     return (
-        <>
-            <TouchableOpacity
-                style={[styles.upgradeButton, style]}
-                onPress={handlePress}
-                activeOpacity={0.85}
-                testID="upgrade-to-pro-btn"
-            >
+        <TouchableOpacity
+            style={[styles.upgradeButton, style, loading && { opacity: 0.6 }]}
+            onPress={onPress}
+            activeOpacity={0.85}
+            testID="upgrade-to-pro-btn"
+            disabled={loading}
+        >
+            <View style={styles.upgradeButtonWrapper}>
                 <LinearGradient
                     colors={isDark ? ['#7C3AED', '#4F46E5'] : ['#9333EA', '#4F46E5']}
                     style={styles.upgradeButtonGradient}
                 >
-                    <ThemedText style={styles.upgradeButtonText}>
-                        ✨ Upgrade to Pro
-                    </ThemedText>
+                    {loading ? (
+                        <ThemedText style={styles.upgradeButtonText}>Loading...</ThemedText>
+                    ) : (
+                        <ThemedText style={styles.upgradeButtonText}>
+                            ✨ {text}
+                        </ThemedText>
+                    )}
                 </LinearGradient>
-            </TouchableOpacity>
-            {showPaywall && (
-                <Paywall
-                    onSuccess={handlePaywallSuccess}
-                    onClose={handlePaywallClose}
-                />
-            )}
-        </>
+            </View>
+        </TouchableOpacity>
     );
 }
 
@@ -64,10 +47,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         overflow: 'hidden',
         elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
     },
     upgradeButtonGradient: {
         padding: 16,
@@ -79,4 +58,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-}); 
+    upgradeButtonWrapper: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+});
+
+export default UpgradeToProButton; 

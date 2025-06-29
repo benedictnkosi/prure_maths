@@ -16,6 +16,7 @@ import { registerForPushNotificationsAsync } from '@/services/notifications';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { styles } from '@/styles/global';
+import { revenueCatService } from '@/services/revenueCat';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -154,7 +155,19 @@ export default function RootLayout() {
       }
     }
 
+    // Initialize RevenueCat
+    async function initializeRevenueCat() {
+      try {
+        console.log('[RevenueCat] Initializing RevenueCat...');
+        await revenueCatService.initialize();
+        console.log('[RevenueCat] Successfully initialized RevenueCat');
+      } catch (error) {
+        console.error('[RevenueCat] Error initializing RevenueCat:', error);
+      }
+    }
+
     initializeNotifications();
+    initializeRevenueCat();
   }, []);
 
   if (!loaded) {

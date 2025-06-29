@@ -19,7 +19,10 @@ import { Paywall } from './components/Paywall';
 import { QuizEmptyState } from '@/app/components/quiz/QuizEmptyState';
 import { Audio } from 'expo-av';
 import { ZoomModal } from '@/app/components/quiz/quiz-modals';
+import { LifetimeQuestionsModal } from '@/app/components/LifetimeQuestionsModal';
 import limitImg from '../assets/images/dimpo/limit.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { analytics } from '../services/analytics';
 
 interface LearnerInfo {
     name: string;
@@ -219,6 +222,11 @@ export default function MathsScreen() {
     const [completedQuestionIds, setCompletedQuestionIds] = useState<number[]>([]);
     const [showAllQuestions, setShowAllQuestions] = useState(false);
     const [showCompletedQuestions, setShowCompletedQuestions] = useState(false); // false = new, true = completed
+    const [showLifetimeWarningModal, setShowLifetimeWarningModal] = useState(false);
+    const [lifetimeQuestionsRemaining, setLifetimeQuestionsRemaining] = useState<number>(0);
+    const [hasShownLifetimeWarning, setHasShownLifetimeWarning] = useState(false);
+    const [isOpeningPaywallFromModal, setIsOpeningPaywallFromModal] = useState(false);
+    const [isLifetimeLimitReached, setIsLifetimeLimitReached] = useState(false);
 
     const styles = getStyles(isDark, colors);
 
@@ -239,6 +247,31 @@ export default function MathsScreen() {
                 console.log('[FETCH COMPLETED QUESTION IDS] Data:', data);
                 if (data.status === 'OK' && data.data && Array.isArray(data.data.maths_practice_question_ids)) {
                     setCompletedQuestionIds(data.data.maths_practice_question_ids);
+                    
+                    // Check lifetime maths practice limit
+                    const completedCount = data.data.maths_practice_question_ids.length;
+                    const lifetimeLimit = data.data.lifetime_maths_practice_limit || 30; // Default to 30 if not provided
+                    const remainingQuestions = lifetimeLimit - completedCount;
+                    
+                    console.log('[LIFETIME CHECK] Completed questions:', completedCount);
+                    console.log('[LIFETIME CHECK] Lifetime limit:', lifetimeLimit);
+                    console.log('[LIFETIME CHECK] Remaining questions:', remainingQuestions);
+                    
+                    // Show lifetime warning modal when 20 questions remaining
+                    if (learnerInfo?.subscription === 'free' && (remainingQuestions === 20 || remainingQuestions === 10) && !hasShownLifetimeWarning) {
+                        console.log('[LIFETIME CHECK] Showing lifetime warning modal - 20 questions remaining');
+                        setLifetimeQuestionsRemaining(remainingQuestions);
+                        setShowLifetimeWarningModal(true);
+                        setHasShownLifetimeWarning(true);
+                    }
+                    
+                    // Show paywall when lifetime limit reached
+                    if (learnerInfo?.subscription === 'free' && completedCount >= lifetimeLimit && !hasShownPaywall && !isOpeningPaywallFromModal) {
+                        console.log('[LIFETIME CHECK] Showing paywall - lifetime limit reached');
+                        setShowPaywall(true);
+                        setHasShownPaywall(true);
+                        setIsLifetimeLimitReached(true);
+                    }
                 } else {
                     setCompletedQuestionIds([]);
                 }
@@ -247,7 +280,7 @@ export default function MathsScreen() {
             }
         }
         fetchCompletedQuestionIds();
-    }, [learnerUid]);
+    }, [learnerUid, learnerInfo, hasShownPaywall, hasShownLifetimeWarning, isOpeningPaywallFromModal]);
 
     // Filtered question ids based on toggle
     const filteredQuestionIds = useMemo(() => {
@@ -714,20 +747,28 @@ export default function MathsScreen() {
             const data = await response.json();
             if (data.status === "OK") {
                 setRemainingMathsPractice(data.data.maths_practice);
-
-                // Handle maths practice limits
-                console.log('data.data.maths_practice', data.data.maths_practice);
-                if (learnerInfo?.subscription === 'free' && data.data.maths_practice <= 0 && !hasShownPaywall) {
-                    setTimeout(() => {
-                        setShowPaywall(true);
-                        setHasShownPaywall(true);
-                    }, 3000);
-                }
             }
         } catch (error) {
             // Handle error silently
         }
     };
+
+    // Add useEffect to handle paywall logic when both learnerInfo and remainingMathsPractice are available
+    useEffect(() => {
+        if (learnerInfo && remainingMathsPractice !== null && !isOpeningPaywallFromModal) {
+            console.log('data.data.maths_practice', remainingMathsPractice);
+            if (learnerInfo.subscription === 'free' && remainingMathsPractice <= 0 && !hasShownPaywall) {
+                console.log('showing paywall');
+                setShowPaywall(true);
+                setHasShownPaywall(true);
+            } else {
+                console.log('not showing paywall');
+                console.log('learnerInfo?.subscription', learnerInfo.subscription);
+                console.log('data.data.maths_practice', remainingMathsPractice);
+                console.log('hasShownPaywall', hasShownPaywall);
+            }
+        }
+    }, [learnerInfo, remainingMathsPractice, hasShownPaywall, isOpeningPaywallFromModal]);
 
     // Add useEffect for showing empty state
     useEffect(() => {
@@ -784,9 +825,15 @@ export default function MathsScreen() {
     // Function to play sound with error handling
     const playSound = async (sound: Audio.Sound | null) => {
         try {
-            if (sound) {
-                await sound.setPositionAsync(0);
-                await sound.playAsync();
+            // Check if sound is enabled in AsyncStorage
+            const soundEnabled = await AsyncStorage.getItem('soundEnabled');
+            
+            // Only play sound if it's enabled (null means default which is true)
+            if (soundEnabled === null || soundEnabled === 'true') {
+                if (sound) {
+                    await sound.setPositionAsync(0);
+                    await sound.playAsync();
+                }
             }
         } catch (error) {
             console.error('Error playing sound:', error);
@@ -940,16 +987,35 @@ export default function MathsScreen() {
                 <Paywall
                     onSuccess={() => {
                         setShowPaywall(false);
+                        setIsLifetimeLimitReached(false);
                         fetchDailyUsage();
                     }}
                     onClose={() => {
                         setShowPaywall(false);
-                        if (remainingMathsPractice === 0) {
+                        if (remainingMathsPractice === 0 || isLifetimeLimitReached) {
                             setShowEmptyState(true);
                         }
                     }}
                 />
             )}
+            <LifetimeQuestionsModal
+                isVisible={showLifetimeWarningModal}
+                onContinue={() => {
+                    setShowLifetimeWarningModal(false);
+                }}
+                onUpgrade={() => {
+                    setShowLifetimeWarningModal(false);
+                    setIsOpeningPaywallFromModal(true);
+                    // Use setTimeout to ensure modal closes before paywall opens
+                    setTimeout(() => {
+                        setShowPaywall(true);
+                        setIsOpeningPaywallFromModal(false);
+                    }, 100);
+                }}
+                remainingQuestions={lifetimeQuestionsRemaining}
+                isDark={isDark}
+                colors={colors}
+            />
             {showEmptyState ? (
                 <QuizEmptyState
                     onGoToProfile={() => router.push('/profile')}
@@ -1391,7 +1457,23 @@ export default function MathsScreen() {
                                                             <TouchableOpacity
                                                                 key={index}
                                                                 style={[StyleSheet.flatten(optionStyle), dynamicOptionColors]}
-                                                                onPress={() => {
+                                                                onPress={async () => {
+                                                                    // Use AsyncStorage to track if the first attempt for this step has been logged
+                                                                    if (selectedOptionIndex === null) {
+                                                                        const analyticsKey = `step_attempt_logged`;
+                                                                        try {
+                                                                            const alreadyLogged = await AsyncStorage.getItem(analyticsKey);
+                                                                            if (!alreadyLogged) {
+                                                                                await analytics.track('Step Attempt', {
+                                                                                    userId: user?.uid,
+                                                                                    isCorrect: index === correctAnswerIndex,
+                                                                                });
+                                                                                await AsyncStorage.setItem(analyticsKey, 'true');
+                                                                            }
+                                                                        } catch (e) {
+                                                                            // fail silently
+                                                                        }
+                                                                    }
                                                                     setSelectedOptionIndex(index);
                                                                     const isCorrect = index === correctAnswerIndex;
 
@@ -1596,7 +1678,9 @@ export default function MathsScreen() {
                                     <SafeAreaView style={styles.stickyButtonBar} edges={['bottom']}>
 
                                         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
-                                            {currentQuestionIndex < filteredQuestionIds.length - 1 && (
+                                            {currentQuestionIndex < filteredQuestionIds.length - 1 && 
+                                             currentStepIndex === sortedSteps.length - 1 && 
+                                             selectedOptionIndex !== null && (
                                                 <TouchableOpacity
                                                     style={styles.modernButton}
                                                     onPress={() => {

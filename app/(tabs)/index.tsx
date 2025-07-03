@@ -389,7 +389,7 @@ export default function HomeScreen() {
   const handleShareApp = async () => {
     try {
       const iosLink = 'https://apps.apple.com/za/app/dimpo-learning-app/6747572593';
-      const androidLink = 'https://play.google.com/store/apps/details?id=za.co.dimpomaths';
+      const androidLink = 'https://play.google.com/store/apps/details?id=com.dimpomaths';
 
       const shareMessage = `📚 Master Mathematics with Dimpo Maths App! 🧮
 

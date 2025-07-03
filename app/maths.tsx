@@ -24,6 +24,8 @@ import limitImg from '../assets/images/dimpo/limit.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { analytics } from '../services/analytics';
 import { FirstAnswerPointsModal } from './components/quiz/FirstAnswerPointsModal';
+import * as StoreReview from 'expo-store-review';
+import * as SecureStore from 'expo-secure-store';
 
 interface LearnerInfo {
     name: string;
@@ -231,6 +233,9 @@ export default function MathsScreen() {
     const [oopsies, setOopsies] = useState(0);    // total_incorrect_steps
     const [showStreakModal, setShowStreakModal] = useState(false);
     const [isAwardingStreakPoints, setIsAwardingStreakPoints] = useState(false);
+    const [hasShownRating, setHasShownRating] = useState(false);
+    // Add state to track prompt count
+    const [ratingPromptCount, setRatingPromptCount] = useState<number>(0);
 
     const styles = getStyles(isDark, colors);
 
@@ -266,7 +271,7 @@ export default function MathsScreen() {
                     });
                     // Optionally, you can use data.data.total_correct_steps and data.data.total_incorrect_steps here
                     const completedCount = data.data.maths_practice_questions.length;
-                    const lifetimeLimit = data.data.lifetime_maths_practice_limit || 30; // Default to 30 if not provided
+                    const lifetimeLimit = data.data.lifetime_maths_practice_limit || 15; // Default to 15 if not provided
                     const remainingQuestions = lifetimeLimit - completedCount;
                     console.log('[LIFETIME CHECK] Completed questions:', completedCount);
                     console.log('[LIFETIME CHECK] Lifetime limit:', lifetimeLimit);
@@ -909,12 +914,50 @@ export default function MathsScreen() {
                 body: JSON.stringify({ uid: user.uid, points: 10 })
             })
                 .then(res => res.json())
-                .then(data => {
+                .then(async data => {
                     Toast.show({
                         type: 'success',
                         text1: 'Question Completed!',
                         text2: 'You earned 10 points for completing this question! 📚',
                     });
+                    // Show rate app prompt on first question complete or after 10 days, max twice
+                    let promptCount = ratingPromptCount;
+                    try {
+                        const hasRated = await SecureStore.getItemAsync('has_reviewed_app');
+                        const nextPromptDateStr = await SecureStore.getItemAsync('next_rating_prompt_date');
+                        const promptCountStr = await SecureStore.getItemAsync('rating_prompt_count');
+                        if (promptCountStr) promptCount = parseInt(promptCountStr, 10);
+                        let canShow = true;
+                        if (hasRated) canShow = false;
+                        if (promptCount >= 2) canShow = false;
+                        if (nextPromptDateStr) {
+                            const nextPromptDate = new Date(nextPromptDateStr);
+                            const now = new Date();
+                            if (now < nextPromptDate) canShow = false;
+                        }
+                        if (canShow) {
+                            const isAvailable = await StoreReview.isAvailableAsync();
+                            if (isAvailable) {
+                                await StoreReview.requestReview();
+                            }
+                            // Increment prompt count
+                            promptCount += 1;
+                            await SecureStore.setItemAsync('rating_prompt_count', promptCount.toString());
+                            setRatingPromptCount(promptCount);
+                            if (promptCount >= 2) {
+                                // After second prompt, set has_reviewed_app to true to never prompt again
+                                await SecureStore.setItemAsync('has_reviewed_app', 'true');
+                            } else {
+                                // Set next prompt date to 10 days from now
+                                const nextPromptDate = new Date();
+                                nextPromptDate.setDate(nextPromptDate.getDate() + 10);
+                                await SecureStore.setItemAsync('next_rating_prompt_date', nextPromptDate.toISOString());
+                            }
+                            setHasShownRating(true);
+                        }
+                    } catch (error) {
+                        // fail silently
+                    }
                 })
                 .catch(() => {
                     Toast.show({
@@ -924,7 +967,7 @@ export default function MathsScreen() {
                     });
                 });
         }
-    }, [currentStepIndex, selectedOptionIndex, sortedSteps.length, user?.uid, selectedQuestion?.id]);
+    }, [currentStepIndex, selectedOptionIndex, sortedSteps.length, user?.uid, selectedQuestion?.id, hasShownRating, ratingPromptCount]);
 
     useEffect(() => {
         if (
@@ -997,6 +1040,13 @@ export default function MathsScreen() {
         if (!val) return '';
         return typeof val === 'string' ? val : val[0] || '';
     }
+
+    // Add useEffect to initialize ratingPromptCount from SecureStore on mount
+    useEffect(() => {
+        SecureStore.getItemAsync('rating_prompt_count').then(val => {
+            if (val) setRatingPromptCount(parseInt(val, 10));
+        });
+    }, []);
 
     return (
         <LinearGradient
@@ -1490,7 +1540,7 @@ export default function MathsScreen() {
                                                                         try {
                                                                             const alreadyLogged = await AsyncStorage.getItem(analyticsKey);
                                                                             if (!alreadyLogged) {
-                                                                                await analytics.track('Step Attempt', {
+                                                                                await analytics.track('Maths Step Attempt', {
                                                                                     userId: user?.uid,
                                                                                     isCorrect: index === correctAnswerIndex,
                                                                                 });

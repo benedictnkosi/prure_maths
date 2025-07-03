@@ -1555,7 +1555,7 @@ export default function QuizScreen() {
             try {
                 const alreadyLogged = await AsyncStorage.getItem(analyticsKey);
                 if (!alreadyLogged) {
-                    await analytics.track('Quiz Attempt', {
+                    await analytics.track('Maths Quiz Attempt', {
                         userId: user?.uid,
                         questionId: currentQuestion.id,
                         selectedOption: answer,

@@ -9,4 +9,4 @@ export const HOST_URL = 'https://examquiz.dedicated.co.za';
 
 //local
 // export const API_BASE_URL = 'http://192.168.1.40:8000/public/learn';
-// export const HOST_URL = 'http://192.168.1.40:8000';
+// export const HOST_URL = 'http://192.168.1.40:8000';r

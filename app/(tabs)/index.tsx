@@ -12,6 +12,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getLearner } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Paywall } from '../components/Paywall';
+import SUBTOPIC_EMOJIS from '../constants/topicEmojis';
 
 // Learning modes
 const LEARNING_MODES = [
@@ -95,6 +97,27 @@ function formatQuestionCount(count: number): string {
   return `${count} question${count !== 1 ? 's' : ''}`;
 }
 
+// Subtopic color palette for variety
+const SUBTOPIC_COLORS = [
+  { light: '#FDE68A', dark: '#B45309' },
+  { light: '#A7F3D0', dark: '#065F46' },
+  { light: '#FCA5A5', dark: '#991B1B' },
+  { light: '#C7D2FE', dark: '#1E3A8A' },
+  { light: '#FBCFE8', dark: '#831843' },
+  { light: '#A5B4FC', dark: '#3730A3' },
+  { light: '#F9A8D4', dark: '#831843' },
+  { light: '#FCD34D', dark: '#92400E' },
+  { light: '#6EE7B7', dark: '#065F46' },
+  { light: '#F9FA8A', dark: '#A16207' },
+  { light: '#B6E0FE', dark: '#155E75' },
+  { light: '#F3F4F6', dark: '#374151' },
+];
+
+function getSubtopicColor(idx: number, isDark: boolean) {
+  const colorObj = SUBTOPIC_COLORS[idx % SUBTOPIC_COLORS.length];
+  return isDark ? colorObj.dark : colorObj.light;
+}
+
 export default function HomeScreen() {
   const [topics, setTopics] = useState<MathTopic[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -113,6 +136,7 @@ export default function HomeScreen() {
   const passedLearningMode = params.learningMode as string;
   const passedSubject = params.subjectName as string;
   const passedTopic = params.topic as string;
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Fetch learner data to get grade
   useFocusEffect(
@@ -209,6 +233,22 @@ export default function HomeScreen() {
     }
   }, [learnerGrade, selectedSubject]);
 
+  useEffect(() => {
+    // Show paywall on first visit
+    const checkFirstVisit = async () => {
+      try {
+        const hasSeenPaywall = await AsyncStorage.getItem('hasSeenPaywall');
+        if (!hasSeenPaywall) {
+          setShowPaywall(true);
+          await AsyncStorage.setItem('hasSeenPaywall', 'true');
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    };
+    checkFirstVisit();
+  }, []);
+
   async function fetchTopics(subject: string) {
     if (!learnerGrade) {
       console.log('Learner grade not available yet, will retry when grade is loaded');
@@ -245,22 +285,6 @@ export default function HomeScreen() {
     fetchTopics('Mathematics');
   };
 
-  const handleBackToSubjects = async () => {
-    setSelectedSubject('Mathematics');
-    setTopics([]);
-    setError(null);
-    // setSelectedLearningMode(null);
-    try {
-      const storedMode = await AsyncStorage.getItem('lastLearningMode');
-      if (storedMode && LEARNING_MODES.some(mode => mode.id === storedMode)) {
-        setSelectedLearningMode(storedMode);
-      } else {
-        setSelectedLearningMode(null);
-      }
-    } catch {
-      setSelectedLearningMode(null);
-    }
-  };
 
   const handleTopicPress = (topic: MathTopic) => {
     if (selectedLearningMode === 'quiz' || selectedLearningMode === 'lessons') {
@@ -577,58 +601,124 @@ Download now:
       height: 200,
       width: '100%',
     },
+    subtopicCard: {
+      width: '90%',
+      paddingVertical: 24,
+      paddingHorizontal: 18,
+      borderRadius: 18,
+      alignItems: 'center',
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.10,
+      shadowRadius: 8,
+      elevation: 3,
+      borderWidth: 1,
+    },
+    subtopicEmoji: {
+      fontSize: 36,
+      marginBottom: 8,
+    },
+    subtopicName: {
+      fontSize: 15,
+      fontWeight: 'bold',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 2,
+    },
   });
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header />
-      {/* View Report Button - always visible if user is logged in */}
-      {user?.uid && (
-        <Pressable
-          style={({ pressed }) => [
-            {
-              marginHorizontal: 20,
-              marginTop: 16,
-              marginBottom: 8,
-              paddingVertical: 14,
-              borderRadius: 12,
-              backgroundColor: isDark ? colors.primary : '#6366F1',
-              alignItems: 'center',
-              opacity: pressed ? 0.85 : 1,
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 8,
-            },
-          ]}
-          onPress={() => {
-            router.push({
-              pathname: '/report/[uid]',
-              params: { uid: user.uid, name: user.displayName || 'Me' },
-            });
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="View my performance report"
-        >
-          <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
-            🏆 View My Report
-          </ThemedText>
-        </Pressable>
+    <>
+      {showPaywall && (
+        <Paywall
+          onSuccess={() => setShowPaywall(false)}
+          onClose={() => setShowPaywall(false)}
+        />
       )}
-      <ThemedView style={styles.container}>
-        {/* View My Report Button and Share App Button - only show if no subject is selected */}
-        {!selectedSubject && (
-          <>
-            {/* View My Report Button - only show if user is logged in */}
-            {user?.uid && (
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
+        <Header />
+        {/* View Report Button - always visible if user is logged in */}
+        {user?.uid && (
+          <Pressable
+            style={({ pressed }) => [
+              {
+                marginHorizontal: 20,
+                marginTop: 16,
+                marginBottom: 8,
+                paddingVertical: 14,
+                borderRadius: 12,
+                backgroundColor: isDark ? colors.primary : '#6366F1',
+                alignItems: 'center',
+                opacity: pressed ? 0.85 : 1,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 8,
+              },
+            ]}
+            onPress={() => {
+              router.push({
+                pathname: '/report/[uid]',
+                params: { uid: user.uid, name: user.displayName || 'Me' },
+              });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="View my performance report"
+          >
+            <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+              🏆 View My Report
+            </ThemedText>
+          </Pressable>
+        )}
+        <ThemedView style={styles.container}>
+          {/* View My Report Button and Share App Button - only show if no subject is selected */}
+          {!selectedSubject && (
+            <>
+              {/* View My Report Button - only show if user is logged in */}
+              {user?.uid && (
+                <Pressable
+                  style={({ pressed }) => [
+                    {
+                      marginHorizontal: 20,
+                      marginTop: 16,
+                      marginBottom: 8,
+                      paddingVertical: 14,
+                      borderRadius: 12,
+                      backgroundColor: isDark ? colors.primary : '#6366F1',
+                      alignItems: 'center',
+                      opacity: pressed ? 0.85 : 1,
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 8,
+                    },
+                  ]}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/report/[uid]',
+                      params: { uid: user.uid, name: user.displayName || 'Me' },
+                    });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="View my performance report"
+                >
+                  <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+                    🏆 View My Report
+                  </ThemedText>
+                </Pressable>
+              )}
+
+              {/* Share App Button */}
               <Pressable
                 style={({ pressed }) => [
                   {
                     marginHorizontal: 20,
-                    marginTop: 16,
-                    marginBottom: 8,
+                    marginTop: 8,
+                    marginBottom: 16,
                     paddingVertical: 14,
                     borderRadius: 12,
-                    backgroundColor: isDark ? colors.primary : '#6366F1',
+                    backgroundColor: isDark ? colors.surface : '#F3F4F6',
+                    borderWidth: 1,
+                    borderColor: isDark ? colors.border : '#E5E7EB',
                     alignItems: 'center',
                     opacity: pressed ? 0.85 : 1,
                     flexDirection: 'row',
@@ -636,250 +726,225 @@ Download now:
                     gap: 8,
                   },
                 ]}
-                onPress={() => {
-                  router.push({
-                    pathname: '/report/[uid]',
-                    params: { uid: user.uid, name: user.displayName || 'Me' },
-                  });
-                }}
+                onPress={handleShareApp}
                 accessibilityRole="button"
-                accessibilityLabel="View my performance report"
+                accessibilityLabel="Share Dimpo Maths app"
               >
-                <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
-                  🏆 View My Report
+                <ThemedText style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>
+                  📤 Invite a Friend
                 </ThemedText>
               </Pressable>
-            )}
+            </>
+          )}
 
-            {/* Share App Button */}
-            <Pressable
-              style={({ pressed }) => [
-                {
-                  marginHorizontal: 20,
-                  marginTop: 8,
-                  marginBottom: 16,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  backgroundColor: isDark ? colors.surface : '#F3F4F6',
-                  borderWidth: 1,
-                  borderColor: isDark ? colors.border : '#E5E7EB',
-                  alignItems: 'center',
-                  opacity: pressed ? 0.85 : 1,
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  gap: 8,
-                },
-              ]}
-              onPress={handleShareApp}
-              accessibilityRole="button"
-              accessibilityLabel="Share Dimpo Maths app"
-            >
-              <ThemedText style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>
-                📤 Invite a Friend
-              </ThemedText>
-            </Pressable>
-          </>
-        )}
-
-        {isLoadingGrade ? (
-          // Show loading state while fetching learner grade
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={styles.loadingText}>Loading your grade level...</ThemedText>
-          </View>
-        ) : selectedLearningMode ? (
-          // Show topics for selected subject
-          <>
-            {/* Learning mode selection as cards/buttons above topics */}
-            <ThemedView style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 8, marginBottom: 16, paddingHorizontal: 20 }}>
-              {LEARNING_MODES.map((mode) => (
-                <Pressable
-                  key={mode.id}
-                  style={({ pressed }) => [
-                    styles.learningModeCard,
-                    {
-                      backgroundColor: selectedLearningMode === mode.id
-                        ? (isDark ? colors.primary : colors.primary + '10')
-                        : (isDark ? colors.surface : '#F8F9FA'),
-                      borderColor: selectedLearningMode === mode.id ? colors.primary : 'transparent',
-                      opacity: pressed ? 0.8 : 1,
-                    },
-                  ]}
-                  onPress={async () => {
-                    setSelectedLearningMode(mode.id);
-                    // Always set subject to Mathematics and fetch topics
-                    setSelectedSubject('Mathematics');
-                    fetchTopics('Mathematics');
-                    try {
-                      await AsyncStorage.setItem('lastLearningMode', mode.id);
-                    } catch {}
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${mode.label} mode`}
-                >
-                  <ThemedText style={styles.learningModeEmoji}>{mode.emoji}</ThemedText>
-                  <ThemedText style={styles.learningModeLabel}>{mode.label}</ThemedText>
-                  <ThemedText style={styles.learningModeDescription}>{mode.description}</ThemedText>
-                </Pressable>
-              ))}
-            </ThemedView>
-            {showSubtopics && selectedTopic && selectedLearningMode === 'practice' ? (
-              <>
-                <Pressable style={styles.backButton} onPress={handleBackToTopics}>
-                  <ThemedText style={{ fontSize: 20 }}>←</ThemedText>
-                  <ThemedText style={styles.backButtonText}>Back</ThemedText>
-                </Pressable>
-                <ThemedView style={styles.topicsContainer}>
-                  <ThemedText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, color: colors.text }}>
-                    {selectedTopic.mainTopic}
-                  </ThemedText>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.topicCard,
-                      { backgroundColor: isDark ? colors.primary : colors.surface, marginBottom: 16 },
-                      pressed && styles.topicCardPressed,
-                    ]}
-                    onPress={handlePracticeAll}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Practice all questions in ${selectedTopic.mainTopic}`}
-                  >
-                    <ThemedText style={{ fontWeight: 'bold', color: colors.text }}>
-                      Practice All Questions
-                    </ThemedText>
-                  </Pressable>
-                  {selectedTopic.subtopics.map((sub, idx) => (
-                    <Pressable
-                      key={sub.name}
-                      style={({ pressed }) => [
-                        styles.topicCard,
-                        { backgroundColor: isDark ? colors.surface : '#F3F4F6', marginBottom: 8 },
-                        pressed && styles.topicCardPressed,
-                      ]}
-                      onPress={() => handleSubtopicPress(sub.name, selectedTopic)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Practice ${sub.name}`}
-                    >
-                      <ThemedText style={{ color: colors.text }}>{sub.name}</ThemedText>
-                      <ThemedText style={styles.topicQuestionCount}>{formatQuestionCount(sub.questionCount)}</ThemedText>
-                    </Pressable>
-                  ))}
-                </ThemedView>
-              </>
-            ) : (
-              <>
-                {isLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <ThemedText style={styles.loadingText}>Loading math topics...</ThemedText>
-                  </View>
-                ) : error ? (
-                  <ThemedText>{error}</ThemedText>
-                ) : (
-                  <ThemedView style={styles.topicsContainer}>
-                    {topics
-                      .sort((a, b) => b.questionCount - a.questionCount)
-                      .map((topic) => (
-                        <Pressable
-                          key={topic.mainTopic}
-                          style={({ pressed }) => [
-                            [
-                              styles.topicCard,
-                              {
-                                backgroundColor: TOPIC_COLORS[topic.mainTopic]
-                                  ? (isDark
-                                    ? TOPIC_COLORS[topic.mainTopic].dark
-                                    : TOPIC_COLORS[topic.mainTopic].light)
-                                  : colors.surface,
-                              },
-                            ],
-                            pressed && styles.topicCardPressed,
-                          ]}
-                          onPress={() => handleTopicPress(topic)}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Select ${topic.mainTopic}`}
-                        >
-                          <ThemedText style={styles.topicEmoji}>
-                            {TOPIC_EMOJIS[topic.mainTopic] || '📚'}
-                          </ThemedText>
-                          <ThemedText style={styles.topicName}>
-                            {topic.mainTopic}
-                          </ThemedText>
-                          <ThemedText style={styles.topicQuestionCount}>
-                            {formatQuestionCount(topic.questionCount)}
-                          </ThemedText>
-                          {topic.subtopics.length > 1 && (
-                            <ThemedText style={styles.subtopicsCount}>
-                              {topic.subtopics.length} subtopic{topic.subtopics.length !== 1 ? 's' : ''}
-                            </ThemedText>
-                          )}
-                        </Pressable>
-                      ))}
-                  </ThemedView>
-                )}
-              </>
-            )}
-          </>
-        ) : (
-          // Show learning mode selection
-          <>
-            {learnerGrade && (
-              <ThemedView style={{ paddingHorizontal: 20, paddingBottom: 16, alignItems: 'center' }}>
-                <ThemedText style={{
-                  fontSize: 16,
-                  color: colors.textSecondary,
-                  textAlign: 'center',
-                  marginBottom: 8
-                }}>
-                  Level {getLevelFromGrade(learnerGrade)} Mathematics
-                </ThemedText>
-                <ThemedText style={{
-                  fontSize: 14,
-                  color: colors.textSecondary,
-                  textAlign: 'center',
-                  opacity: 0.8
-                }}>
-                  Choose your learning mode
-                </ThemedText>
-              </ThemedView>
-            )}
-
-            {/* Learning Mode Selection */}
-            <ThemedView style={styles.learningModeContainer}>
-              <ThemedText style={styles.learningModeTitle}>
-                Choose Learning Mode
-              </ThemedText>
-              <View style={styles.learningModeGrid}>
+          {isLoadingGrade ? (
+            // Show loading state while fetching learner grade
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <ThemedText style={styles.loadingText}>Loading your grade level...</ThemedText>
+            </View>
+          ) : selectedLearningMode ? (
+            // Show topics for selected subject
+            <>
+              {/* Learning mode selection as cards/buttons above topics */}
+              <ThemedView style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 8, marginBottom: 16, paddingHorizontal: 20 }}>
                 {LEARNING_MODES.map((mode) => (
                   <Pressable
                     key={mode.id}
                     style={({ pressed }) => [
                       styles.learningModeCard,
                       {
-                        backgroundColor: isDark ? colors.surface : '#F8F9FA',
+                        backgroundColor: selectedLearningMode === mode.id
+                          ? (isDark ? colors.primary : colors.primary + '10')
+                          : (isDark ? colors.surface : '#F8F9FA'),
+                        borderColor: selectedLearningMode === mode.id ? colors.primary : 'transparent',
                         opacity: pressed ? 0.8 : 1,
                       },
-                      selectedLearningMode === mode.id && styles.learningModeCardSelected,
                     ]}
-                    onPress={() => handleLearningModeSelect(mode.id)}
+                    onPress={async () => {
+                      setSelectedLearningMode(mode.id);
+                      // Always set subject to Mathematics and fetch topics
+                      setSelectedSubject('Mathematics');
+                      fetchTopics('Mathematics');
+                      try {
+                        await AsyncStorage.setItem('lastLearningMode', mode.id);
+                      } catch {}
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={`Select ${mode.label} mode`}
                   >
-                    <ThemedText style={styles.learningModeEmoji}>
-                      {mode.emoji}
-                    </ThemedText>
-                    <ThemedText style={styles.learningModeLabel}>
-                      {mode.label}
-                    </ThemedText>
-                    <ThemedText style={styles.learningModeDescription}>
-                      {mode.description}
-                    </ThemedText>
+                    <ThemedText style={styles.learningModeEmoji}>{mode.emoji}</ThemedText>
+                    <ThemedText style={styles.learningModeLabel}>{mode.label}</ThemedText>
+                    <ThemedText style={styles.learningModeDescription}>{mode.description}</ThemedText>
                   </Pressable>
                 ))}
-              </View>
-            </ThemedView>
-          </>
-        )}
-      </ThemedView>
-    </ScrollView>
+              </ThemedView>
+              {showSubtopics && selectedTopic && selectedLearningMode === 'practice' ? (
+                <>
+                  <Pressable style={styles.backButton} onPress={handleBackToTopics}>
+                    <ThemedText style={{ fontSize: 20 }}>←</ThemedText>
+                    <ThemedText style={styles.backButtonText}>Back</ThemedText>
+                  </Pressable>
+                  <ThemedView style={styles.topicsContainer}>
+                    <ThemedText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, color: colors.text }}>
+                      {selectedTopic.mainTopic}
+                    </ThemedText>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.topicCard,
+                        { backgroundColor: isDark ? colors.primary : colors.surface, marginBottom: 16 },
+                        pressed && styles.topicCardPressed,
+                      ]}
+                      onPress={handlePracticeAll}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Practice all questions in ${selectedTopic.mainTopic}`}
+                    >
+                      <ThemedText style={{ fontWeight: 'bold', color: colors.text }}>
+                        Practice All Questions
+                      </ThemedText>
+                    </Pressable>
+                    {selectedTopic.subtopics.map((sub, idx) => (
+                      <Pressable
+                        key={sub.name}
+                        style={({ pressed }) => [
+                          styles.subtopicCard,
+                          {
+                            backgroundColor: getSubtopicColor(idx, isDark),
+                            borderColor: isDark ? colors.border : '#e6e6e6',
+                          },
+                          pressed && styles.topicCardPressed,
+                        ]}
+                        onPress={() => handleSubtopicPress(sub.name, selectedTopic)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Practice ${sub.name}`}
+                      >
+                        <ThemedText style={styles.subtopicEmoji}>
+                          {(SUBTOPIC_EMOJIS[sub.name] || '📚')}
+                        </ThemedText>
+                        <ThemedText style={styles.subtopicName}>
+                          {sub.name}
+                        </ThemedText>
+                        <ThemedText style={styles.topicQuestionCount}>{formatQuestionCount(sub.questionCount)}</ThemedText>
+                      </Pressable>
+                    ))}
+                  </ThemedView>
+                </>
+              ) : (
+                <>
+                  {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color={colors.primary} />
+                      <ThemedText style={styles.loadingText}>Loading math topics...</ThemedText>
+                    </View>
+                  ) : error ? (
+                    <ThemedText>{error}</ThemedText>
+                  ) : (
+                    <ThemedView style={styles.topicsContainer}>
+                      {topics
+                        .sort((a, b) => b.questionCount - a.questionCount)
+                        .map((topic) => (
+                          <Pressable
+                            key={topic.mainTopic}
+                            style={({ pressed }) => [
+                              [
+                                styles.topicCard,
+                                {
+                                  backgroundColor: TOPIC_COLORS[topic.mainTopic]
+                                    ? (isDark
+                                      ? TOPIC_COLORS[topic.mainTopic].dark
+                                      : TOPIC_COLORS[topic.mainTopic].light)
+                                    : colors.surface,
+                                },
+                              ],
+                              pressed && styles.topicCardPressed,
+                            ]}
+                            onPress={() => handleTopicPress(topic)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Select ${topic.mainTopic}`}
+                          >
+                            <ThemedText style={styles.topicEmoji}>
+                              {TOPIC_EMOJIS[topic.mainTopic] || '📚'}
+                            </ThemedText>
+                            <ThemedText style={styles.topicName}>
+                              {topic.mainTopic}
+                            </ThemedText>
+                            <ThemedText style={styles.topicQuestionCount}>
+                              {formatQuestionCount(topic.questionCount)}
+                            </ThemedText>
+                            {topic.subtopics.length > 1 && (
+                              <ThemedText style={styles.subtopicsCount}>
+                                {topic.subtopics.length} subtopic{topic.subtopics.length !== 1 ? 's' : ''}
+                              </ThemedText>
+                            )}
+                          </Pressable>
+                        ))}
+                    </ThemedView>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            // Show learning mode selection
+            <>
+              {learnerGrade && (
+                <ThemedView style={{ paddingHorizontal: 20, paddingBottom: 16, alignItems: 'center' }}>
+                  <ThemedText style={{
+                    fontSize: 16,
+                    color: colors.textSecondary,
+                    textAlign: 'center',
+                    marginBottom: 8
+                  }}>
+                    Level {getLevelFromGrade(learnerGrade)} Mathematics
+                  </ThemedText>
+                  <ThemedText style={{
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                    textAlign: 'center',
+                    opacity: 0.8
+                  }}>
+                    Choose your learning mode
+                  </ThemedText>
+                </ThemedView>
+              )}
+
+              {/* Learning Mode Selection */}
+              <ThemedView style={styles.learningModeContainer}>
+                <ThemedText style={styles.learningModeTitle}>
+                  Choose Learning Mode
+                </ThemedText>
+                <View style={styles.learningModeGrid}>
+                  {LEARNING_MODES.map((mode) => (
+                    <Pressable
+                      key={mode.id}
+                      style={({ pressed }) => [
+                        styles.learningModeCard,
+                        {
+                          backgroundColor: isDark ? colors.surface : '#F8F9FA',
+                          opacity: pressed ? 0.8 : 1,
+                        },
+                        selectedLearningMode === mode.id && styles.learningModeCardSelected,
+                      ]}
+                      onPress={() => handleLearningModeSelect(mode.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${mode.label} mode`}
+                    >
+                      <ThemedText style={styles.learningModeEmoji}>
+                        {mode.emoji}
+                      </ThemedText>
+                      <ThemedText style={styles.learningModeLabel}>
+                        {mode.label}
+                      </ThemedText>
+                      <ThemedText style={styles.learningModeDescription}>
+                        {mode.description}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </ThemedView>
+            </>
+          )}
+        </ThemedView>
+      </ScrollView>
+    </>
   );
 }

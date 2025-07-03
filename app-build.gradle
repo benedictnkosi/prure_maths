@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.puremaths'
+    namespace 'com.dimpomaths'
     defaultConfig {
-        applicationId 'com.puremaths'
+        applicationId 'com.dimpomaths'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -101,12 +101,6 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        release {
-            storeFile file('keystore.jks')
-            storePassword '15ec2f70a58b1f07309c5756868c6f25'
-            keyAlias 'b6489fff5583c1c7a5cb3c8eb3e4ab5d'
-            keyPassword 'bea696d61457cd65ab59639fe3dba56a'
-        }
     }
     buildTypes {
         debug {
@@ -115,7 +109,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

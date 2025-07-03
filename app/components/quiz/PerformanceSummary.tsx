@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '../ThemedText';
 import { useColorScheme } from 'react-native';
-import { colors as colorConstants } from '../../constants/Colors';
+import { Colors } from '../../constants/Colors';
+import { HOST_URL } from '@/config/api';
 
 export interface SubjectStats {
     total_answers: number;
@@ -16,6 +17,8 @@ export interface SubjectStats {
 export interface PerformanceSummaryProps {
     stats: SubjectStats | null;
     onRestart: () => void;
+    topic: string;
+    uid: string;
 }
 
 function getProgressBarColor(progress: number): string {
@@ -25,14 +28,45 @@ function getProgressBarColor(progress: number): string {
     return '#EF4444';
 }
 
-export const PerformanceSummary = ({ stats, onRestart }: PerformanceSummaryProps) => {
+export const PerformanceSummary = ({ stats, onRestart, topic, uid }: PerformanceSummaryProps) => {
     const isDark = useColorScheme() === 'dark';
-    const themeColors = isDark ? colorConstants.dark : colorConstants.light;
+    const themeColors = isDark ? Colors.dark : Colors.light;
 
     if (!stats) return null;
 
     const progress = stats.total_answers === 0 ? 0 :
         Math.round((stats.correct_answers / stats.total_answers) * 100);
+
+    const handleReset = () => {
+        Alert.alert(
+            'Reset Progress',
+            'Are you sure you want to reset your question results for this topic? This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Reset',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const response = await fetch(`${HOST_URL}/api/learner/maths-practice/reset`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ topic, uid })
+                            });
+                            const data = await response.json();
+                            if (data.status === 'OK') {
+                                onRestart();
+                            } else {
+                                Alert.alert('Error', 'Could not reset your progress. Please try again.');
+                            }
+                        } catch (error) {
+                            Alert.alert('Error', 'Could not reset your progress. Please try again.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     return (
         <View style={[styles.performanceContainer, {
@@ -48,7 +82,7 @@ export const PerformanceSummary = ({ stats, onRestart }: PerformanceSummaryProps
                     style={[styles.restartIconButton, {
                         backgroundColor: isDark ? 'rgba(255, 59, 48, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                     }]}
-                    onPress={onRestart}
+                    onPress={handleReset}
                 >
                     <Ionicons name="refresh-circle" size={28} color={isDark ? '#FF3B30' : '#EF4444'} />
                 </TouchableOpacity>

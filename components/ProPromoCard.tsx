@@ -59,7 +59,7 @@ export function ProPromoCard({ testID, onPress, showCrown = true }: ProPromoCard
                         { color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)' }
                     ]}
                 >
-                    ⏳ Limited offer: Get Pro for R9.99/week.
+                    ⏳ Limited offer: Get Pro Now.
                 </ThemedText>
 
                 <View style={styles.proFeaturesContainer}>

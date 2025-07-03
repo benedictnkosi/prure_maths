@@ -23,6 +23,7 @@ import { LifetimeQuestionsModal } from '@/app/components/LifetimeQuestionsModal'
 import limitImg from '../assets/images/dimpo/limit.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { analytics } from '../services/analytics';
+import { FirstAnswerPointsModal } from './components/quiz/FirstAnswerPointsModal';
 
 interface LearnerInfo {
     name: string;
@@ -220,13 +221,16 @@ export default function MathsScreen() {
     const [justAwardedSessionPoints, setJustAwardedSessionPoints] = useState(false);
     const awardedSessionRef = React.useRef<boolean>(false);
     const [completedQuestionIds, setCompletedQuestionIds] = useState<number[]>([]);
-    const [showAllQuestions, setShowAllQuestions] = useState(false);
     const [showCompletedQuestions, setShowCompletedQuestions] = useState(false); // false = new, true = completed
     const [showLifetimeWarningModal, setShowLifetimeWarningModal] = useState(false);
     const [lifetimeQuestionsRemaining, setLifetimeQuestionsRemaining] = useState<number>(0);
     const [hasShownLifetimeWarning, setHasShownLifetimeWarning] = useState(false);
     const [isOpeningPaywallFromModal, setIsOpeningPaywallFromModal] = useState(false);
     const [isLifetimeLimitReached, setIsLifetimeLimitReached] = useState(false);
+    const [bullseyes, setBullseyes] = useState(0); // total_correct_steps
+    const [oopsies, setOopsies] = useState(0);    // total_incorrect_steps
+    const [showStreakModal, setShowStreakModal] = useState(false);
+    const [isAwardingStreakPoints, setIsAwardingStreakPoints] = useState(false);
 
     const styles = getStyles(isDark, colors);
 
@@ -242,21 +246,31 @@ export default function MathsScreen() {
         async function fetchCompletedQuestionIds() {
             if (!learnerUid) return;
             try {
-                const response = await fetch(`${HOST_URL}/api/learner/maths-practice-question-ids?uid=${learnerUid}`);
+                // Ensure topicParam is always a string
+                let topicParam: string = '';
+                if (selectedTopic) {
+                    topicParam = typeof selectedTopic === 'string' ? selectedTopic : selectedTopic[0];
+                } else if (topic) {
+                    topicParam = typeof topic === 'string' ? topic : topic[0];
+                }
+                const response = await fetch(`${HOST_URL}/api/learner/maths-practice-question-ids?uid=${learnerUid}&topic=${encodeURIComponent(topicParam)}`);
                 const data = await response.json();
                 console.log('[FETCH COMPLETED QUESTION IDS] Data:', data);
-                if (data.status === 'OK' && data.data && Array.isArray(data.data.maths_practice_question_ids)) {
-                    setCompletedQuestionIds(data.data.maths_practice_question_ids);
-                    
-                    // Check lifetime maths practice limit
-                    const completedCount = data.data.maths_practice_question_ids.length;
+                if (data.status === 'OK' && data.data && Array.isArray(data.data.maths_practice_questions)) {
+                    setCompletedQuestionIds(data.data.maths_practice_questions);
+                    setBullseyes(typeof data.data.total_correct_steps === 'number' ? data.data.total_correct_steps : 0);
+                    setOopsies(typeof data.data.total_incorrect_steps === 'number' ? data.data.total_incorrect_steps : 0);
+                    console.log('[BULLSEYES/OOPSIES] Set from API:', {
+                        bullseyes: data.data.total_correct_steps,
+                        oopsies: data.data.total_incorrect_steps
+                    });
+                    // Optionally, you can use data.data.total_correct_steps and data.data.total_incorrect_steps here
+                    const completedCount = data.data.maths_practice_questions.length;
                     const lifetimeLimit = data.data.lifetime_maths_practice_limit || 30; // Default to 30 if not provided
                     const remainingQuestions = lifetimeLimit - completedCount;
-                    
                     console.log('[LIFETIME CHECK] Completed questions:', completedCount);
                     console.log('[LIFETIME CHECK] Lifetime limit:', lifetimeLimit);
                     console.log('[LIFETIME CHECK] Remaining questions:', remainingQuestions);
-                    
                     // Show lifetime warning modal when 20 questions remaining
                     if (learnerInfo?.subscription === 'free' && (remainingQuestions === 20 || remainingQuestions === 10) && !hasShownLifetimeWarning) {
                         console.log('[LIFETIME CHECK] Showing lifetime warning modal - 20 questions remaining');
@@ -264,7 +278,6 @@ export default function MathsScreen() {
                         setShowLifetimeWarningModal(true);
                         setHasShownLifetimeWarning(true);
                     }
-                    
                     // Show paywall when lifetime limit reached
                     if (learnerInfo?.subscription === 'free' && completedCount >= lifetimeLimit && !hasShownPaywall && !isOpeningPaywallFromModal) {
                         console.log('[LIFETIME CHECK] Showing paywall - lifetime limit reached');
@@ -274,13 +287,16 @@ export default function MathsScreen() {
                     }
                 } else {
                     setCompletedQuestionIds([]);
+                    setBullseyes(0);
+                    setOopsies(0);
+                    console.log('[BULLSEYES/OOPSIES] Reset to 0 (no data)');
                 }
             } catch (error) {
                 setCompletedQuestionIds([]);
             }
         }
         fetchCompletedQuestionIds();
-    }, [learnerUid, learnerInfo, hasShownPaywall, hasShownLifetimeWarning, isOpeningPaywallFromModal]);
+    }, [learnerUid, learnerInfo, hasShownPaywall, hasShownLifetimeWarning, isOpeningPaywallFromModal, selectedTopic, topic]);
 
     // Filtered question ids based on toggle
     const filteredQuestionIds = useMemo(() => {
@@ -976,6 +992,12 @@ export default function MathsScreen() {
         }
     }, [perfectQuestionsCount, user?.uid]);
 
+    // Helper to ensure topic and uid are always strings
+    function getString(val: string | string[] | undefined): string {
+        if (!val) return '';
+        return typeof val === 'string' ? val : val[0] || '';
+    }
+
     return (
         <LinearGradient
             colors={isDark ? ['#1E1E1E', '#121212'] : ['#FFFFFF', '#F8FAFC', '#F1F5F9']}
@@ -1139,14 +1161,20 @@ export default function MathsScreen() {
 
 {viewMode === 'steps' && (
                                         <PerformanceSummary
-                                            stats={scoreStats}
-                                            onRestart={() => setScoreStats({
-                                                total_answers: 0,
-                                                correct_answers: 0,
-                                                incorrect_answers: 0,
-                                                correct_percentage: 0,
-                                                incorrect_percentage: 0,
-                                            })}
+                                            stats={{
+                                                total_answers: bullseyes + oopsies,
+                                                correct_answers: bullseyes,
+                                                incorrect_answers: oopsies,
+                                                correct_percentage: (bullseyes + oopsies) > 0 ? Math.round((bullseyes / (bullseyes + oopsies)) * 100) : 0,
+                                                incorrect_percentage: (bullseyes + oopsies) > 0 ? Math.round((oopsies / (bullseyes + oopsies)) * 100) : 0,
+                                            }}
+                                            onRestart={() => {
+                                                setBullseyes(0);
+                                                setOopsies(0);
+                                                // Optionally: reset other stats or trigger a reload
+                                            }}
+                                            topic={getString(selectedTopic || topic)}
+                                            uid={getString(user?.uid || learnerUid)}
                                         />
                                     )}
 
@@ -1199,8 +1227,6 @@ export default function MathsScreen() {
                                             </ThemedText>
                                         </View>
                                     )}
-
-                                    
 
                                     {viewMode === 'steps' && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 8, width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 10, overflow: 'hidden', backgroundColor: isDark ? '#23272F' : '#E5E7EB', borderWidth: 1, borderColor: isDark ? '#334155' : '#CBD5E1' }}>
@@ -1506,18 +1532,33 @@ export default function MathsScreen() {
 
                                                                     // If this is the last step, update daily usage
                                                                     if (currentStepIndex === sortedSteps.length - 1) {
-                                                                        fetch(`${HOST_URL}/api/learner/daily-usage/maths-practice?uid=${user?.uid}&question_id=${filteredQuestionIds[currentQuestionIndex]}`, {
+                                                                        // Calculate correct/incorrect steps for this question
+                                                                        // correctAnswersCount is incremented only on correct answers for this question
+                                                                        const correct_steps = correctAnswersCount + (isCorrect ? 1 : 0); // include this step
+                                                                        const total_steps = sortedSteps.length;
+                                                                        const incorrect_steps = total_steps - correct_steps;
+                                                                        const correct = correct_steps === total_steps;
+                                                                        fetch(`${HOST_URL}/api/learner/daily-usage/maths-practice`, {
                                                                             method: 'POST',
                                                                             headers: {
                                                                                 'Content-Type': 'application/json'
-                                                                            }
+                                                                            },
+                                                                            body: JSON.stringify({
+                                                                                uid: user?.uid,
+                                                                                question_id: filteredQuestionIds[currentQuestionIndex],
+                                                                                correct,
+                                                                                correct_steps,
+                                                                                incorrect_steps
+                                                                            })
                                                                         })
                                                                             .then(response => response.json())
                                                                             .then(data => {
                                                                                 if (data.status === "OK") {
                                                                                     console.log('[DEBUG] Maths practice updated:', data.message);
                                                                                     // Refresh daily usage to get updated count
-
+                                                                                    if (data.streak_earned) {
+                                                                                        setShowStreakModal(true);
+                                                                                    }
                                                                                 }
                                                                             })
                                                                             .catch(error => {
@@ -1711,6 +1752,26 @@ export default function MathsScreen() {
                 zoomImageUrl={zoomImageUrl}
                 imageRotation={imageRotation}
                 setImageRotation={setImageRotation}
+            />
+            <FirstAnswerPointsModal
+                isVisible={showStreakModal}
+                onClose={async () => {
+                    setShowStreakModal(false);
+                    if (!isAwardingStreakPoints && user?.uid) {
+                        setIsAwardingStreakPoints(true);
+                        try {
+                            await fetch(`${HOST_URL}/api/maths/update-maths-points`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ uid: user.uid, points: 10 })
+                            });
+                        } catch (e) {
+                            // Optionally show error toast
+                        } finally {
+                            setIsAwardingStreakPoints(false);
+                        }
+                    }
+                }}
             />
         </LinearGradient>
     );

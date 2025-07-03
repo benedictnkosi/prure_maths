@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, TextInput, View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,9 @@ import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import Constants from 'expo-constants';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Login() {
   const [emailOrPhone, setEmailOrPhone] = useState('');
@@ -15,6 +18,24 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const themeColors = Colors[colorScheme];
+
+  useEffect(() => {
+    const checkFirstTime = async () => {
+      try {
+        const hasOpened = await AsyncStorage.getItem('hasOpenedApp');
+        console.log('hasOpened', hasOpened);
+        if (!hasOpened) {
+          await AsyncStorage.setItem('hasOpenedApp', 'true');
+          router.replace('/onboarding');
+        }
+      } catch (e) {
+        // fail silently
+      }
+    };
+    checkFirstTime();
+  }, []);
 
   const validateInput = (input: string): { isValid: boolean; email: string } => {
     // Check if input is a valid email
@@ -23,12 +44,7 @@ export default function Login() {
       return { isValid: true, email: input };
     }
 
-    // Check if input is a valid phone number (10 digits)
-    const phoneRegex = /^\d{10}$/;
-    if (phoneRegex.test(input)) {
-      return { isValid: true, email: `${input}@examquiz.co.za` };
-    }
-
+    // Remove phone number validation
     return { isValid: false, email: '' };
   };
 
@@ -48,7 +64,7 @@ export default function Login() {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Please enter a valid email or 10-digit phone number',
+        text2: 'Please enter a valid email',
         position: 'bottom'
       });
       return;
@@ -80,9 +96,9 @@ export default function Login() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <LinearGradient
-        colors={['#1B1464', '#2B2F77']}
+        colors={colorScheme === 'dark' ? ['#1B1464', '#2B2F77'] : ['#FFFFFF', '#F5F5F5']}
         style={styles.gradient}
       >
         <KeyboardAvoidingView
@@ -96,15 +112,28 @@ export default function Login() {
           >
             <View style={styles.content}>
               <View style={styles.header}>
-                <ThemedText style={styles.title}>➗ Dimpo Maths</ThemedText>
-                <ThemedText style={styles.subtitle}>Master Pure Maths! Start your journey today 🌟</ThemedText>
+                <ThemedText style={[styles.title, { color: themeColors.text }]}>➗ Dimpo Maths</ThemedText>
+                <ThemedText style={[styles.subtitle, { color: themeColors.textSecondary }]}>Master Pure Maths! Start your journey today 🌟</ThemedText>
               </View>
 
               <View style={styles.form}>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colorScheme === 'dark' ? themeColors.card : '#FAFAFA',
+                      color: themeColors.text,
+                      borderColor: colorScheme === 'dark' ? '#333' : '#E5E7EB',
+                      borderWidth: 1,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.06,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    },
+                  ]}
                   placeholder="Email or Phone Number"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colorScheme === 'dark' ? '#94A3B8' : '#666666'}
                   value={emailOrPhone}
                   onChangeText={setEmailOrPhone}
                   autoCapitalize="none"
@@ -114,9 +143,23 @@ export default function Login() {
                 />
                 <View style={styles.passwordContainer}>
                   <TextInput
-                    style={[styles.input, styles.passwordInput]}
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      {
+                        backgroundColor: colorScheme === 'dark' ? themeColors.card : '#FAFAFA',
+                        color: themeColors.text,
+                        borderColor: colorScheme === 'dark' ? '#333' : '#E5E7EB',
+                        borderWidth: 1,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.06,
+                        shadowRadius: 2,
+                        elevation: 2,
+                      },
+                    ]}
                     placeholder="Password"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={colorScheme === 'dark' ? '#94A3B8' : '#666666'}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -131,27 +174,27 @@ export default function Login() {
                     <Ionicons
                       name={showPassword ? "eye-off" : "eye"}
                       size={24}
-                      color="#94A3B8"
+                      color={colorScheme === 'dark' ? '#94A3B8' : '#666666'}
                     />
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
-                  style={[styles.button, isLoading && styles.buttonDisabled]}
+                  style={[styles.button, isLoading && styles.buttonDisabled, { backgroundColor: colorScheme === 'dark' ? '#3B82F6' : '#1B1464' }]}
                   onPress={handleLogin}
                   disabled={isLoading}
                   testID="login-button"
                 >
-                  <ThemedText style={styles.buttonText}>
+                  <ThemedText style={[styles.buttonText, { color: '#FFFFFF' }]}>
                     {isLoading ? 'Signing in...' : 'Start Learning →'}
                   </ThemedText>
                 </TouchableOpacity>
 
                 <View style={styles.registerContainer}>
-                  <ThemedText style={styles.helperText}>
+                  <ThemedText style={[styles.helperText, { color: themeColors.textSecondary }]}>
                     New to Dimpo Maths? Join our community of math learners! 🌍
                   </ThemedText>
                   <TouchableOpacity
-                    style={styles.createAccountButton}
+                    style={[styles.createAccountButton, { backgroundColor: colorScheme === 'dark' ? '#2563EB' : '#3B82F6' }]}
                     onPress={() => router.push('/onboarding')}
                     testID="create-account-button"
                   >
@@ -160,7 +203,7 @@ export default function Login() {
                 </View>
 
                 <View style={styles.forgotPasswordContainer}>
-                  <ThemedText style={styles.helperText}>
+                  <ThemedText style={[styles.helperText, { color: themeColors.textSecondary }]}>
                     Forgot your password? We'll help you get back to learning! 🔑
                   </ThemedText>
                   <TouchableOpacity
@@ -168,7 +211,7 @@ export default function Login() {
                     onPress={() => router.push('/forgot-password')}
                     testID="forgot-password-button"
                   >
-                    <ThemedText style={styles.linkText}>Reset it here</ThemedText>
+                    <ThemedText style={[styles.linkText, { color: colorScheme === 'dark' ? '#60A5FA' : '#1B1464' }]}>Reset it here</ThemedText>
                   </TouchableOpacity>
                 </View>
 
@@ -178,7 +221,7 @@ export default function Login() {
                     onPress={() => router.push('https://examquiz.co.za/info/delete-account')}
                     testID="delete-account-button"
                   >
-                    <ThemedText style={styles.deleteAccountText}>Delete Account</ThemedText>
+                    <ThemedText style={[styles.deleteAccountText, { color: '#EF4444' }]}>Delete Account</ThemedText>
                   </TouchableOpacity>
                 </View>
               </View>

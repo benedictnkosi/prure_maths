@@ -346,19 +346,37 @@ export default function ProfileScreen() {
 
             <View style={styles.editForm}>
               <View style={styles.inputGroup}>
+                {/* Show PRO badge before the name label */}
+                {profileInfo?.subscription && profileInfo.subscription !== 'free' && (
+                  <View style={[styles.proBadgeContainer, { alignSelf: 'flex-start', marginBottom: 8 }]}> 
+                    <LinearGradient
+                      colors={["#FFD700", "#FFC300", "#FFB300"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.proBadge}
+                    >
+                      <ThemedText style={styles.proBadgeText}>
+                        👑 PRO
+                      </ThemedText>
+                    </LinearGradient>
+                  </View>
+                )}
                 <ThemedText style={[styles.label, { color: colors.text }]}>Name</ThemedText>
-                <TextInput
-                  style={[styles.input, {
-                    backgroundColor: isDark ? colors.surface : '#FFFFFF',
-                    borderColor: colors.border,
-                    color: colors.text
-                  }]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter your name"
-                  placeholderTextColor={isDark ? colors.textSecondary : '#94A3B8'}
-                  maxLength={50}
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TextInput
+                    style={[styles.input, {
+                      backgroundColor: isDark ? colors.surface : '#FFFFFF',
+                      borderColor: colors.border,
+                      color: colors.text,
+                      flex: 1
+                    }]}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Enter your name"
+                    placeholderTextColor={isDark ? colors.textSecondary : '#94A3B8'}
+                    maxLength={50}
+                  />
+                </View>
                 <ThemedText style={[styles.label, { color: colors.text, marginTop: 16 }]}>Level</ThemedText>
                 <View style={[styles.input, { padding: 0, justifyContent: 'center' }]}>
                   <Picker
@@ -784,5 +802,33 @@ const styles = StyleSheet.create({
   upgradeButton: {
     marginHorizontal: 0,
     marginVertical: 0,
+  },
+  proBadgeContainer: {
+    marginLeft: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+    minWidth: 64,
+  },
+  proBadgeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#7c5700',
+    letterSpacing: 1,
+    textShadowColor: '#fffbe6',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 }); 

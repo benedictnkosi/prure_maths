@@ -8,6 +8,8 @@ import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingData } from '../onboarding';
 import { HOST_URL } from '@/config/api';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 interface RegisterFormProps {
     onboardingData: OnboardingData;
@@ -27,6 +29,9 @@ export default function RegisterForm({ onboardingData, defaultMethod = 'email' }
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(defaultMethod);
     const { signUp } = useAuth();
+    const { isDark } = useTheme();
+    const colors = isDark ? Colors.dark : Colors.light;
+    const [focusedField, setFocusedField] = useState<string | null>(null);
 
     const logAnalyticsEvent = async (eventName: string, params: {
         user_id: string;
@@ -36,30 +41,12 @@ export default function RegisterForm({ onboardingData, defaultMethod = 'email' }
         console.log('Logging analytics event:', eventName, params);
     };
 
-    const validatePhoneNumber = (phone: string): boolean => {
-        return /^\d{10}$/.test(phone);
-    };
-
     const handleRegister = async () => {
         if (!name || !password || !confirmPassword) {
             Toast.show({
                 type: 'error',
                 text1: 'Error',
                 text2: 'Please fill in all fields',
-                position: 'bottom',
-                visibilityTime: 3000,
-                autoHide: true,
-                topOffset: 30,
-                bottomOffset: 40
-            });
-            return;
-        }
-
-        if (registrationMethod === 'phone' && !validatePhoneNumber(phoneNumber)) {
-            Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: 'Please enter a valid 10-digit phone number',
                 position: 'bottom',
                 visibilityTime: 3000,
                 autoHide: true,
@@ -207,197 +194,276 @@ export default function RegisterForm({ onboardingData, defaultMethod = 'email' }
     };
 
     return (
-        <View style={styles.container} testID="register-form-container">
-            <View style={styles.registrationMethodContainer}>
-                <TouchableOpacity
-                    style={[
-                        styles.methodButton,
-                        registrationMethod === 'email' && styles.methodButtonActive
-                    ]}
-                    onPress={() => setRegistrationMethod('email')}
-                >
-                    <ThemedText style={[
-                        styles.methodButtonText,
-                        registrationMethod === 'email' && styles.methodButtonTextActive
-                    ]}>
-                        Email
-                    </ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[
-                        styles.methodButton,
-                        registrationMethod === 'phone' && styles.methodButtonActive
-                    ]}
-                    onPress={() => setRegistrationMethod('phone')}
-                >
-                    <ThemedText style={[
-                        styles.methodButtonText,
-                        registrationMethod === 'phone' && styles.methodButtonTextActive
-                    ]}>
-                        Phone
-                    </ThemedText>
-                </TouchableOpacity>
-            </View>
-
-            <TextInput
-                style={styles.input}
-                placeholder="Name"
-                placeholderTextColor="#94A3B8"
-                value={name}
-                onChangeText={setName}
-                testID="name-input"
-                maxLength={50}
-                accessibilityLabel="Full name input"
-            />
-
-            {registrationMethod === 'email' ? (
-                <>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email"
-                        placeholderTextColor="#94A3B8"
-                        value={email}
-                        onChangeText={setEmail}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        testID="email-input"
-                        maxLength={50}
-                        accessibilityLabel="Email input"
-                    />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 32 }}>
+            <View style={[
+                styles.card,
+                {
+                    backgroundColor: colors.card,
+                    shadowColor: isDark ? '#000' : '#333',
+                    shadowOpacity: isDark ? 0.5 : 0.12,
+                    shadowRadius: 16,
+                    shadowOffset: { width: 0, height: 8 },
+                    elevation: 8,
+                    borderRadius: 24,
+                    width: '100%',
+                    maxWidth: 400,
+                    padding: 28,
+                },
+            ]}>
+                <ThemedText style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', marginBottom: 8, color: colors.text }}>Create Account</ThemedText>
+                <ThemedText style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>Join thousands of learners mastering maths step by step! 🔢</ThemedText>
+                <View style={[styles.registrationMethodContainer, { backgroundColor: isDark ? '#23272F' : '#F3F4F6', marginBottom: 24 }]}> 
                     <TouchableOpacity
-                        onPress={handleCreateGmail}
-                        style={styles.gmailLink}
-                        accessibilityLabel="Use phone number instead"
+                        style={[
+                            styles.methodButton,
+                            registrationMethod === 'email' && { backgroundColor: Colors.primary }
+                        ]}
+                        onPress={() => setRegistrationMethod('email')}
+                        activeOpacity={0.85}
                     >
-                        <ThemedText style={styles.gmailLinkText}>
-                            Don't have an email? Use your phone number
+                        <ThemedText style={[
+                            styles.methodButtonText,
+                            registrationMethod === 'email' && { color: '#fff' }
+                        ]}>
+                            Email
                         </ThemedText>
                     </TouchableOpacity>
-                </>
-            ) : (
-                <TextInput
-                    style={styles.input}
-                    placeholder="Phone Number (10 digits)"
-                    placeholderTextColor="#94A3B8"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                    testID="phone-input"
-                    maxLength={10}
-                    accessibilityLabel="Phone number input"
-                />
-            )}
-
-            <View style={styles.inputContainer}>
-                <View style={styles.passwordContainer}>
-                    <TextInput
-                        style={[styles.input, styles.passwordInput]}
-                        placeholder="Password"
-                        placeholderTextColor="#94A3B8"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                        testID="password-input"
-                        maxLength={50}
-                        accessibilityLabel="Password input"
-                    />
                     <TouchableOpacity
-                        style={styles.eyeIcon}
-                        onPress={() => setShowPassword(!showPassword)}
-                        testID="toggle-password-visibility"
+                        style={[
+                            styles.methodButton,
+                            registrationMethod === 'phone' && { backgroundColor: Colors.primary }
+                        ]}
+                        onPress={() => setRegistrationMethod('phone')}
+                        activeOpacity={0.85}
                     >
-                        <Ionicons
-                            name={showPassword ? "eye-off" : "eye"}
-                            size={24}
-                            color="#94A3B8"
-                        />
+                        <ThemedText style={[
+                            styles.methodButtonText,
+                            registrationMethod === 'phone' && { color: '#fff' }
+                        ]}>
+                            Phone
+                        </ThemedText>
                     </TouchableOpacity>
                 </View>
-            </View>
-            <View style={styles.passwordContainer}>
-                <TextInput
-                    style={[styles.input, styles.passwordInput]}
-                    placeholder="Confirm Password"
-                    placeholderTextColor="#94A3B8"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    testID="confirm-password-input"
-                    maxLength={50}
-                    accessibilityLabel="Confirm password input"
-                />
-                <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    testID="toggle-confirm-password-visibility"
-                >
-                    <Ionicons
-                        name={showConfirmPassword ? "eye-off" : "eye"}
-                        size={24}
-                        color="#94A3B8"
+                <View style={{ marginBottom: 16 }}>
+                    <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Name</ThemedText>
+                    <TextInput
+                        style={[
+                            styles.input,
+                            {
+                                backgroundColor: isDark ? '#18181B' : '#fff',
+                                color: colors.text,
+                                borderColor: focusedField === 'name' ? Colors.primary : (isDark ? '#333' : '#E5E7EB'),
+                                borderWidth: 1.5,
+                                shadowColor: focusedField === 'name' ? Colors.primary : 'transparent',
+                                shadowOpacity: focusedField === 'name' ? 0.15 : 0,
+                                shadowRadius: 6,
+                            },
+                        ]}
+                        placeholder="Enter your name"
+                        placeholderTextColor={colors.textSecondary}
+                        value={name}
+                        onChangeText={setName}
+                        onFocus={() => setFocusedField('name')}
+                        onBlur={() => setFocusedField(null)}
+                        testID="name-input"
+                        maxLength={50}
+                        accessibilityLabel="Full name input"
                     />
+                </View>
+                {registrationMethod === 'email' ? (
+                    <>
+                        <View style={{ marginBottom: 16 }}>
+                            <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Email</ThemedText>
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    {
+                                        backgroundColor: isDark ? '#18181B' : '#fff',
+                                        color: colors.text,
+                                        borderColor: focusedField === 'email' ? Colors.primary : (isDark ? '#333' : '#E5E7EB'),
+                                        borderWidth: 1.5,
+                                        shadowColor: focusedField === 'email' ? Colors.primary : 'transparent',
+                                        shadowOpacity: focusedField === 'email' ? 0.15 : 0,
+                                        shadowRadius: 6,
+                                    },
+                                ]}
+                                placeholder="Enter your email"
+                                placeholderTextColor={colors.textSecondary}
+                                value={email}
+                                onChangeText={setEmail}
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                                onFocus={() => setFocusedField('email')}
+                                onBlur={() => setFocusedField(null)}
+                                testID="email-input"
+                                maxLength={50}
+                                accessibilityLabel="Email input"
+                            />
+                        </View>
+                        <TouchableOpacity
+                            onPress={handleCreateGmail}
+                            style={{ marginBottom: 16, alignSelf: 'flex-end' }}
+                            accessibilityLabel="Use phone number instead"
+                        >
+                            <ThemedText style={{ color: Colors.primary, fontSize: 14, textDecorationLine: 'underline' }}>
+                                Don't have an email? Use your phone number
+                            </ThemedText>
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    <View style={{ marginBottom: 16 }}>
+                        <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Phone Number</ThemedText>
+                        <TextInput
+                            style={[
+                                styles.input,
+                                {
+                                    backgroundColor: isDark ? '#18181B' : '#fff',
+                                    color: colors.text,
+                                    borderColor: focusedField === 'phone' ? Colors.primary : (isDark ? '#333' : '#E5E7EB'),
+                                    borderWidth: 1.5,
+                                    shadowColor: focusedField === 'phone' ? Colors.primary : 'transparent',
+                                    shadowOpacity: focusedField === 'phone' ? 0.15 : 0,
+                                    shadowRadius: 6,
+                                },
+                            ]}
+                            placeholder="Enter your phone number"
+                            placeholderTextColor={colors.textSecondary}
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
+                            keyboardType="phone-pad"
+                            onFocus={() => setFocusedField('phone')}
+                            onBlur={() => setFocusedField(null)}
+                            testID="phone-input"
+                            maxLength={10}
+                            accessibilityLabel="Phone number input"
+                        />
+                    </View>
+                )}
+                <View style={{ marginBottom: 16 }}>
+                    <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Password</ThemedText>
+                    <View style={{ position: 'relative' }}>
+                        <TextInput
+                            style={[
+                                styles.input,
+                                styles.passwordInput,
+                                {
+                                    backgroundColor: isDark ? '#18181B' : '#fff',
+                                    color: colors.text,
+                                    borderColor: focusedField === 'password' ? Colors.primary : (isDark ? '#333' : '#E5E7EB'),
+                                    borderWidth: 1.5,
+                                    shadowColor: focusedField === 'password' ? Colors.primary : 'transparent',
+                                    shadowOpacity: focusedField === 'password' ? 0.15 : 0,
+                                    shadowRadius: 6,
+                                },
+                            ]}
+                            placeholder="Enter your password"
+                            placeholderTextColor={colors.textSecondary}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
+                            onFocus={() => setFocusedField('password')}
+                            onBlur={() => setFocusedField(null)}
+                            testID="password-input"
+                            maxLength={50}
+                            accessibilityLabel="Password input"
+                        />
+                        <TouchableOpacity
+                            style={styles.eyeIcon}
+                            onPress={() => setShowPassword(!showPassword)}
+                            testID="toggle-password-visibility"
+                        >
+                            <Ionicons
+                                name={showPassword ? "eye-off" : "eye"}
+                                size={24}
+                                color={colors.textSecondary}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                <View style={{ marginBottom: 24 }}>
+                    <ThemedText style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Confirm Password</ThemedText>
+                    <View style={{ position: 'relative' }}>
+                        <TextInput
+                            style={[
+                                styles.input,
+                                styles.passwordInput,
+                                {
+                                    backgroundColor: isDark ? '#18181B' : '#fff',
+                                    color: colors.text,
+                                    borderColor: focusedField === 'confirmPassword' ? Colors.primary : (isDark ? '#333' : '#E5E7EB'),
+                                    borderWidth: 1.5,
+                                    shadowColor: focusedField === 'confirmPassword' ? Colors.primary : 'transparent',
+                                    shadowOpacity: focusedField === 'confirmPassword' ? 0.15 : 0,
+                                    shadowRadius: 6,
+                                },
+                            ]}
+                            placeholder="Confirm your password"
+                            placeholderTextColor={colors.textSecondary}
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            secureTextEntry={!showConfirmPassword}
+                            onFocus={() => setFocusedField('confirmPassword')}
+                            onBlur={() => setFocusedField(null)}
+                            testID="confirm-password-input"
+                            maxLength={50}
+                            accessibilityLabel="Confirm password input"
+                        />
+                        <TouchableOpacity
+                            style={styles.eyeIcon}
+                            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                            testID="toggle-confirm-password-visibility"
+                        >
+                            <Ionicons
+                                name={showConfirmPassword ? "eye-off" : "eye"}
+                                size={24}
+                                color={colors.textSecondary}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        {
+                            backgroundColor: Colors.primary,
+                            borderRadius: 16,
+                            paddingVertical: 18,
+                            marginTop: 8,
+                            shadowColor: Colors.primary,
+                            shadowOpacity: 0.18,
+                            shadowRadius: 8,
+                            elevation: 3,
+                        },
+                        isLoading && styles.buttonDisabled,
+                    ]}
+                    onPress={handleRegister}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                    testID="register-button"
+                    accessibilityLabel="Create account button"
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" testID="register-loading-indicator" />
+                    ) : (
+                        <ThemedText style={{ color: '#fff', fontSize: 18, fontWeight: '700' }} testID="register-button-text">Create Account</ThemedText>
+                    )}
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
-                onPress={handleRegister}
-                disabled={isLoading}
-                testID="register-button"
-                accessibilityLabel="Create account button"
-            >
-                {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" testID="register-loading-indicator" />
-                ) : (
-                    <ThemedText style={styles.buttonText} testID="register-button-text">Create Account</ThemedText>
-                )}
-            </TouchableOpacity>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        width: '100%',
-    },
-    registrationMethodContainer: {
-        flexDirection: 'row',
-        marginBottom: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 12,
-        padding: 4,
-    },
-    methodButton: {
-        flex: 1,
-        padding: 12,
-        alignItems: 'center',
-        borderRadius: 8,
-    },
-    methodButtonActive: {
-        backgroundColor: '#4F46E5',
-    },
-    methodButtonText: {
-        color: '#94A3B8',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    methodButtonTextActive: {
-        color: '#FFFFFF',
-    },
-    inputContainer: {
-        marginBottom: 16,
-    },
-    passwordContainer: {
-        position: 'relative',
-        width: '100%',
-        marginBottom: 16,
+    card: {
+        // placeholder for card style, overridden inline
     },
     input: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 12,
-        padding: 16,
-        marginBottom: 4,
-        color: '#FFFFFF',
         fontSize: 16,
+        padding: 16,
+        marginBottom: 0,
+        marginTop: 0,
+        // backgroundColor, color, borderColor, etc. are set inline
     },
     passwordInput: {
         paddingRight: 50,
@@ -409,34 +475,30 @@ const styles = StyleSheet.create({
         top: 12,
         padding: 4,
     },
-    helperText: {
-        fontSize: 14,
-        color: '#94A3B8',
-        marginLeft: 4,
-        marginTop: 4,
-    },
     button: {
-        backgroundColor: '#4F46E5',
-        borderRadius: 12,
-        padding: 16,
         alignItems: 'center',
-        marginTop: 8,
+        justifyContent: 'center',
     },
     buttonDisabled: {
         opacity: 0.7,
     },
-    buttonText: {
-        color: '#FFFFFF',
+    methodButton: {
+        flex: 1,
+        padding: 12,
+        alignItems: 'center',
+        borderRadius: 8,
+        marginHorizontal: 2,
+    },
+    methodButtonText: {
+        color: '#94A3B8',
         fontSize: 16,
         fontWeight: '600',
     },
-    gmailLink: {
+    registrationMethodContainer: {
+        flexDirection: 'row',
         marginBottom: 16,
-        padding: 8,
-    },
-    gmailLinkText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        textDecorationLine: 'underline',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 12,
+        padding: 4,
     },
 });

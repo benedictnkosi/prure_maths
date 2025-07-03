@@ -13,6 +13,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { HOST_URL } from '@/config/api';
 import RegisterForm from './components/RegisterForm';
 import { analytics } from '../services/analytics';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 const SUPERHERO_NAMES = [
   'Spider-Man',
@@ -323,6 +325,8 @@ export default function OnboardingScreen() {
   const [registrationMethod, setRegistrationMethod] = useState<'email' | 'phone'>('email');
   const insets = useSafeAreaInsets();
   const { signUp } = useAuth();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
 
   const [errors, setErrors] = useState({
     curriculum: ''
@@ -417,15 +421,17 @@ export default function OnboardingScreen() {
         return (
           <View style={[styles.step, { justifyContent: 'flex-start', paddingTop: 40 }]} testID="welcome-step">
             <View style={{ width: '100%', height: 300, marginBottom: 40, justifyContent: 'center', alignItems: 'center' }}>
-              <ThemedText style={{ fontSize: 120 }} testID="welcome-emoji">
-                {EMOJIS.welcome}
-              </ThemedText>
+              <Image
+                source={require('@/assets/images/dimpo/welcome.png')}
+                style={{ width: 240, height: 240, resizeMode: 'contain' }}
+                testID="welcome-image"
+              />
             </View>
             <View style={[styles.textContainer, { paddingHorizontal: 20 }]} testID="welcome-text-container">
-              <ThemedText style={[styles.welcomeTitle, { fontSize: 24, marginBottom: 24 }]} testID="welcome-title">
+              <ThemedText style={[styles.welcomeTitle, { fontSize: 24, marginBottom: 24, color: colors.text }]} testID="welcome-title">
                 Welcome to Dimpo Maths
               </ThemedText>
-              <ThemedText style={[styles.welcomeText, { fontSize: 20, lineHeight: 32, marginBottom: 24 }]} testID="welcome-description">
+              <ThemedText style={[styles.welcomeText, { fontSize: 20, lineHeight: 32, marginBottom: 24, color: colors.text }]} testID="welcome-description">
                 🌟 Master Pure Maths! Start your journey today 🌟
               </ThemedText>
             </View>
@@ -435,15 +441,17 @@ export default function OnboardingScreen() {
         return (
           <View style={[styles.step, { justifyContent: 'flex-start', paddingTop: 40 }]} testID="practice-step">
             <View style={{ width: '100%', height: 300, marginBottom: 40, justifyContent: 'center', alignItems: 'center' }}>
-              <ThemedText style={{ fontSize: 120 }} testID="practice-emoji">
-                {EMOJIS.practice}
-              </ThemedText>
+              <Image
+                source={require('@/assets/images/dimpo/practice.png')}
+                style={{ width: 240, height: 240, resizeMode: 'contain' }}
+                testID="practice-image"
+              />
             </View>
             <View style={[styles.textContainer, { paddingHorizontal: 20 }]} testID="practice-text-container">
-              <ThemedText style={[styles.welcomeTitle, { fontSize: 26, marginBottom: 20 }]} testID="practice-title">
+              <ThemedText style={[styles.welcomeTitle, { fontSize: 26, marginBottom: 20, color: colors.text }]} testID="practice-title">
                 Practice Makes Perfect
               </ThemedText>
-              <ThemedText style={[styles.welcomeText, { fontSize: 18, lineHeight: 28, marginBottom: 20 }]} testID="practice-description">
+              <ThemedText style={[styles.welcomeText, { fontSize: 18, lineHeight: 28, marginBottom: 20, color: colors.text }]} testID="practice-description">
                 ✍️ Solve maths problems, get instant feedback, and improve your skills with every question.
               </ThemedText>
             </View>
@@ -453,15 +461,17 @@ export default function OnboardingScreen() {
         return (
           <View style={[styles.step, { justifyContent: 'flex-start', paddingTop: 40 }]} testID="challenge-step">
             <View style={{ width: '100%', height: 300, marginBottom: 40, justifyContent: 'center', alignItems: 'center' }}>
-              <ThemedText style={{ fontSize: 120 }} testID="challenge-emoji">
-                {EMOJIS.challenge}
-              </ThemedText>
+              <Image
+                source={require('@/assets/images/dimpo/challenges.png')}
+                style={{ width: 240, height: 240, resizeMode: 'contain' }}
+                testID="challenge-image"
+              />
             </View>
             <View style={[styles.textContainer, { paddingHorizontal: 20 }]} testID="challenge-text-container">
-              <ThemedText style={[styles.welcomeTitle, { fontSize: 26, marginBottom: 20 }]} testID="challenge-title">
+              <ThemedText style={[styles.welcomeTitle, { fontSize: 26, marginBottom: 20, color: colors.text }]} testID="challenge-title">
                 Take on Challenges
               </ThemedText>
-              <ThemedText style={[styles.welcomeText, { fontSize: 18, lineHeight: 28, marginBottom: 20 }]} testID="challenge-description">
+              <ThemedText style={[styles.welcomeText, { fontSize: 18, lineHeight: 28, marginBottom: 20, color: colors.text }]} testID="challenge-description">
                 🎯 Test yourself with quizzes and timed challenges. Track your progress and aim for mastery!
               </ThemedText>
             </View>
@@ -471,15 +481,17 @@ export default function OnboardingScreen() {
         return (
           <View style={[styles.step, { justifyContent: 'flex-start', paddingTop: 40 }]} testID="progress-step">
             <View style={{ width: '100%', height: 300, marginBottom: 40, justifyContent: 'center', alignItems: 'center' }}>
-              <ThemedText style={{ fontSize: 120 }} testID="progress-emoji">
-                {EMOJIS.progress}
-              </ThemedText>
+              <Image
+                source={require('@/assets/images/dimpo/progress.png')}
+                style={{ width: 240, height: 240, resizeMode: 'contain' }}
+                testID="progress-image"
+              />
             </View>
             <View style={[styles.textContainer, { paddingHorizontal: 20 }]} testID="progress-text-container">
-              <ThemedText style={[styles.welcomeTitle, { fontSize: 26, marginBottom: 20 }]} testID="progress-title">
+              <ThemedText style={[styles.welcomeTitle, { fontSize: 26, marginBottom: 20, color: colors.text }]} testID="progress-title">
                 Track Your Progress
               </ThemedText>
-              <ThemedText style={[styles.welcomeText, { fontSize: 18, lineHeight: 28, marginBottom: 20 }]} testID="progress-description">
+              <ThemedText style={[styles.welcomeText, { fontSize: 18, lineHeight: 28, marginBottom: 20, color: colors.text }]} testID="progress-description">
                 📈 See your improvement over time, earn badges, and celebrate your achievements in maths!
               </ThemedText>
             </View>
@@ -498,8 +510,8 @@ export default function OnboardingScreen() {
         return (
           <View style={styles.step} testID="level-step">
             <View style={styles.textContainer}>
-              <ThemedText style={[styles.stepTitle, { fontSize: 26, marginBottom: 12 }]}>What's your maths level?</ThemedText>
-              <ThemedText style={styles.levelSubtext}>Level 5 is equivalent to Grade 12.</ThemedText>
+              <ThemedText style={[styles.stepTitle, { fontSize: 26, marginBottom: 12, color: colors.text }]}>What's your maths level?</ThemedText>
+              <ThemedText style={[styles.levelSubtext, { color: colors.text }]}>Level 5 is equivalent to Grade 12\Senior Year.</ThemedText>
             </View>
             <View style={styles.levelGridContainer}>
               <View style={styles.levelRow}>
@@ -517,7 +529,7 @@ export default function OnboardingScreen() {
                     }}
                     testID={`level-${item.level}`}
                   >
-                    <ThemedText style={styles.levelSquareText}>{item.level}</ThemedText>
+                    <ThemedText style={[styles.levelSquareText, { color: colors.text }]}>{item.level}</ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -536,7 +548,7 @@ export default function OnboardingScreen() {
                     }}
                     testID={`level-${item.level}`}
                   >
-                    <ThemedText style={styles.levelSquareText}>{item.level}</ThemedText>
+                    <ThemedText style={[styles.levelSquareText, { color: colors.text }]}>{item.level}</ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -554,7 +566,7 @@ export default function OnboardingScreen() {
                   }}
                   testID={`level-${LEVELS[4].level}`}
                 >
-                  <ThemedText style={styles.levelSquareText}>{LEVELS[4].level}</ThemedText>
+                  <ThemedText style={[styles.levelSquareText, { color: colors.text }]}>{LEVELS[4].level}</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -564,10 +576,10 @@ export default function OnboardingScreen() {
         return (
           <View style={styles.step} testID="avatar-step">
             <View style={styles.textContainer}>
-              <ThemedText style={styles.stepTitle}>
+              <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
                 Choose Your Avatar
               </ThemedText>
-              <ThemedText style={styles.stepSubtitle}>
+              <ThemedText style={[styles.stepSubtitle, { color: colors.text }]}>
                 Select an avatar to represent you in the app
               </ThemedText>
             </View>
@@ -606,16 +618,16 @@ export default function OnboardingScreen() {
         return (
           <View style={styles.step} testID="guest-step">
             <View style={styles.textContainer}>
-              <ThemedText style={styles.stepTitle}>
+              <ThemedText style={[styles.stepTitle, { color: colors.text }]}>
                 Continue as Guest?
               </ThemedText>
-              <ThemedText style={styles.stepSubtitle}>
+              <ThemedText style={[styles.stepSubtitle, { color: colors.text }]}>
                 You can start learning right away or create an account
               </ThemedText>
             </View>
             <View style={styles.authOptionsContainer}>
               <TouchableOpacity
-                style={[styles.authButton, styles.guestButton]}
+                style={[styles.authButton, styles.guestButton, { backgroundColor: colors.card }]}
                 onPress={async () => {
                   try {
                     await createGuestAccount({ selectedAvatar, selectedGrade: selectedGrade || 8, signUp });
@@ -633,16 +645,16 @@ export default function OnboardingScreen() {
                 }}
                 testID="continue-as-guest-button"
               >
-                <ThemedText style={styles.authButtonText}>
+                <ThemedText style={[styles.authButtonText, { color: colors.text }]}>
                   Continue as Guest
                 </ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.authButton, styles.emailButton]}
+                style={[styles.authButton, styles.emailButton, { backgroundColor: Colors.primary }]}
                 onPress={() => setStep(7)}
                 testID="create-account-button"
               >
-                <ThemedText style={styles.authButtonText}>
+                <ThemedText style={[styles.authButtonText, { color: '#fff' }]}>
                   Create Account
                 </ThemedText>
               </TouchableOpacity>
@@ -654,12 +666,12 @@ export default function OnboardingScreen() {
         return (
           <View style={styles.step} testID="register-form-step">
             <TouchableOpacity
-              style={styles.registerBackButton}
+              style={[styles.registerBackButton, { backgroundColor: colors.card }]}
               onPress={() => setStep(6)}
               testID="back-to-account-choice"
             >
-              <Ionicons name="arrow-back" size={22} color="#fff" style={{ marginRight: 6 }} />
-              <ThemedText style={styles.registerBackButtonText}>Back</ThemedText>
+              <Ionicons name="arrow-back" size={22} color={colors.text} style={{ marginRight: 6 }} />
+              <ThemedText style={[styles.registerBackButtonText, { color: colors.text }]}>Back</ThemedText>
             </TouchableOpacity>
             <View style={styles.registerFormContainer}>
               <RegisterForm onboardingData={{
@@ -699,54 +711,50 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={['#1B1464', '#2B2F77']}
-      style={[styles.container, { paddingTop: insets.top }]}
+    <View
+      style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
     >
       <View style={styles.content}>
         <View style={styles.stepContainer}>
           {renderStep()}
         </View>
-
         {(step < 7) && (
           <View style={styles.buttonContainer} testID="navigation-buttons">
             {step === 0 ? (
               <>
                 <TouchableOpacity
-                  style={[styles.button, styles.secondaryButton]}
+                  style={[styles.button, { backgroundColor: isDark ? '#23272F' : '#E5E7EB' }]}
                   onPress={() => router.replace('/login')}
                   testID="login-button"
                 >
-                  <ThemedText style={styles.buttonText}>Back</ThemedText>
+                  <ThemedText style={[styles.buttonText, { color: colors.text }]}>Back</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.button, styles.primaryButton]}
+                  style={[styles.button, { backgroundColor: Colors.primary }]}
                   onPress={async () => {
                     await analytics.track('Maths Onboarding Started', {});
                     setStep(1);
                   }}
                   testID="start-onboarding-button"
                 >
-                  <ThemedText style={[styles.buttonText, styles.primaryButtonText]}>
-                    Start! 🚀
-                  </ThemedText>
+                  <ThemedText style={[styles.buttonText, { color: '#fff' }]}>Start! 🚀</ThemedText>
                 </TouchableOpacity>
               </>
             ) : (
               <>
                 <TouchableOpacity
-                  style={[styles.button, styles.secondaryButton]}
+                  style={[styles.button, { backgroundColor: isDark ? '#23272F' : '#E5E7EB' }]}
                   onPress={() => {
                     setStep(step - 1);
                   }}
                   testID="previous-step-button"
                 >
-                  <ThemedText style={styles.buttonText}>Back</ThemedText>
+                  <ThemedText style={[styles.buttonText, { color: colors.text }]}>Back</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.button,
-                    styles.primaryButton,
+                    { backgroundColor: Colors.primary },
                     (!canProceed() && step !== 0) && styles.buttonDisabled
                   ]}
                   onPress={handleNextStep}
@@ -755,7 +763,7 @@ export default function OnboardingScreen() {
                 >
                   <ThemedText style={[
                     styles.buttonText,
-                    styles.primaryButtonText,
+                    { color: '#fff' },
                     (!canProceed() && step !== 0) && styles.buttonTextDisabled
                   ]}>
                     Next! 🚀
@@ -766,7 +774,7 @@ export default function OnboardingScreen() {
           </View>
         )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -806,7 +814,6 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     marginBottom: 16,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -814,7 +821,6 @@ const styles = StyleSheet.create({
   boastingText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     marginBottom: 24,
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -822,14 +828,11 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 18,
-    color: '#E2E8F0',
-    textAlign: 'center',
     lineHeight: 28,
   },
   stepTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
     marginTop: 12,
     marginBottom: 12,
     textAlign: 'center',
@@ -837,7 +840,6 @@ const styles = StyleSheet.create({
   },
   picker: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
   },
   searchContainer: {
     width: '100%',
@@ -850,11 +852,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 56,
     paddingHorizontal: 20,
-    color: '#1E293B',
   },
   statsText: {
     fontSize: 20,
-    color: '#E2E8F0',
     lineHeight: 36,
     textAlign: 'center',
     marginTop: 32,
@@ -875,35 +875,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  primaryButton: {
-    backgroundColor: '#FFFFFF',
-  },
-  secondaryButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
   buttonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  primaryButtonText: {
-    color: '#4d5ad3',
-  },
-  debugText: {
-    color: '#E2E8F0',
   },
   buttonDisabled: {
     backgroundColor: '#94A3B8',
   },
   buttonTextDisabled: {
-    color: '#E2E8F0',
+    opacity: 0.8,
   },
   errorText: {
     color: '#FCA5A5',
   },
   selectedSchoolContainer: {
     width: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 24,
     padding: 20,
     marginTop: 20,
@@ -919,18 +905,15 @@ const styles = StyleSheet.create({
   },
   selectedSchoolTitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   selectedSchoolName: {
     fontSize: 20,
-    color: '#FFFFFF',
     fontWeight: '600',
     marginBottom: 8,
   },
   selectedSchoolAddress: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 24,
   },
   timeStepContainer: {
@@ -953,8 +936,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   curriculumButtonSelected: {
     borderColor: '#FFFFFF',
@@ -963,13 +944,11 @@ const styles = StyleSheet.create({
   curriculumButtonText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   curriculumButtonTextSelected: {
     color: '#FFFFFF',
   },
   testimonialContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 20,
     padding: 24,
     marginHorizontal: 16,
@@ -978,19 +957,16 @@ const styles = StyleSheet.create({
   },
   testimonialRating: {
     fontSize: 22,
-    color: '#FFD700',
     marginBottom: 8,
   },
   testimonialTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
   },
   testimonialText: {
     fontSize: 16,
-    color: '#E2E8F0',
     textAlign: 'center',
     lineHeight: 24,
     fontStyle: 'italic',
@@ -1003,7 +979,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1029,31 +1004,26 @@ const styles = StyleSheet.create({
   planTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
   },
   unlockText: {
     fontSize: 20,
-    color: '#FFFFFF',
     marginBottom: 24,
     textAlign: 'center',
   },
   trialBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     marginBottom: 24,
   },
   trialText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   planOption: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -1071,12 +1041,10 @@ const styles = StyleSheet.create({
   planLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
   planSubLabel: {
     fontSize: 14,
-    color: '#FFFFFF',
     opacity: 0.7,
   },
   priceContainer: {
@@ -1085,16 +1053,13 @@ const styles = StyleSheet.create({
   priceAmount: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   pricePeriod: {
     fontSize: 14,
-    color: '#FFFFFF',
     opacity: 0.7,
   },
   savingsText: {
     fontSize: 14,
-    color: '#4CAF50',
     marginTop: 8,
   },
   featuresContainer: {
@@ -1111,32 +1076,27 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   checkmarkText: {
-    color: '#FFFFFF',
     fontSize: 16,
     flex: 1,
   },
   cancelText: {
     fontSize: 14,
-    color: '#FFFFFF',
     opacity: 0.8,
     textAlign: 'center',
     marginBottom: 24,
   },
   subscribeButton: {
-    backgroundColor: '#FFFFFF',
     width: '100%',
     paddingVertical: 16,
     borderRadius: 28,
     alignItems: 'center',
   },
   subscribeButtonText: {
-    color: '#1B1464',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -1147,14 +1107,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   loadingPlansCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 24,
     padding: 32,
     width: '100%',
     alignItems: 'center',
     backdropFilter: 'blur(10px)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   loadingIconContainer: {
     position: 'relative',
@@ -1188,7 +1146,6 @@ const styles = StyleSheet.create({
   loadingPlansText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -1201,7 +1158,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4d5ad3',
     marginHorizontal: 4,
   },
   loadingDot1: {
@@ -1220,7 +1176,6 @@ const styles = StyleSheet.create({
   loadingStep: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 12,
   },
@@ -1230,13 +1185,11 @@ const styles = StyleSheet.create({
   },
   loadingStepText: {
     fontSize: 16,
-    color: '#FFFFFF',
     opacity: 0.9,
     flex: 1,
   },
   stepSubtitle: {
     fontSize: 18,
-    color: '#E2E8F0',
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1259,8 +1212,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   subjectButtonSelected: {
     borderColor: '#FFFFFF',
@@ -1277,10 +1228,8 @@ const styles = StyleSheet.create({
   subjectButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   subjectButtonTextSelected: {
-    color: '#FFFFFF',
     opacity: 1,
   },
   registrationContainer: {
@@ -1295,25 +1244,21 @@ const styles = StyleSheet.create({
   registrationTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
   },
   registrationSubtitle: {
     fontSize: 16,
-    color: '#E2E8F0',
     textAlign: 'center',
     lineHeight: 24,
   },
   funFactContainer: {
     width: '90%',
-    backgroundColor: 'rgba(77, 90, 211, 0.3)',
     borderRadius: 24,
     padding: 20,
     marginTop: 12,
     marginHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   funFactHeader: {
     flexDirection: 'row',
@@ -1323,12 +1268,10 @@ const styles = StyleSheet.create({
   },
   funFactTitle: {
     fontSize: 18,
-    color: '#FFFFFF',
     fontWeight: '600',
   },
   funFactText: {
     fontSize: 16,
-    color: '#FFFFFF',
     lineHeight: 24,
     opacity: 0.9,
   },
@@ -1351,8 +1294,6 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     overflow: 'hidden',
     position: 'relative',
   },
@@ -1393,17 +1334,15 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   skipButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   skipButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
+    opacity: 0.9,
   },
   authOptionsContainer: {
     width: '100%',
@@ -1427,18 +1366,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
   },
   guestButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   authButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   guestPromptText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    opacity: 0.7,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 8,
@@ -1447,7 +1383,6 @@ const styles = StyleSheet.create({
     width: '90%',
     paddingHorizontal: 20,
     marginBottom: 24,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
@@ -1463,7 +1398,6 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 4,
@@ -1489,12 +1423,10 @@ const styles = StyleSheet.create({
   },
   disclaimerTitle: {
     fontWeight: '700',
-    color: '#FBBF24',
     fontSize: 15,
   },
   disclaimerText: {
     fontSize: 15,
-    color: '#F3F4F6',
     lineHeight: 22,
     opacity: 0.85,
   },
@@ -1509,7 +1441,6 @@ const styles = StyleSheet.create({
   },
   checkboxText: {
     fontSize: 16,
-    color: '#FFFFFF',
     opacity: 0.9,
   },
   ratingsContainer: {
@@ -1525,7 +1456,6 @@ const styles = StyleSheet.create({
   ratingsTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 28,
@@ -1548,7 +1478,6 @@ const styles = StyleSheet.create({
   },
   ratingsSubtitle: {
     fontSize: 16,
-    color: '#E2E8F0',
     textAlign: 'center',
     marginTop: 16,
   },
@@ -1558,7 +1487,6 @@ const styles = StyleSheet.create({
   },
   ratingsFooterText: {
     fontSize: 14,
-    color: '#E2E8F0',
     textAlign: 'center',
     opacity: 0.8,
     lineHeight: 20,

@@ -23,13 +23,30 @@ cp app-build.gradle app-build.gradle.tmp
 
 # Extract current versionCode and versionName from the temporary file
 CURRENT_CODE=$(grep 'versionCode' app-build.gradle.tmp | grep -o '[0-9]\+')
-CURRENT_NAME=$(grep 'versionName' app-build.gradle.tmp | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+CURRENT_NAME=$(grep 'versionName' app-build.gradle.tmp | grep -o '"[^"]*"' | sed 's/"//g')
+
+# Check if we successfully extracted the versions
+if [ -z "$CURRENT_CODE" ]; then
+    echo "Error: Could not extract versionCode from app-build.gradle"
+    exit 1
+fi
+
+if [ -z "$CURRENT_NAME" ]; then
+    echo "Error: Could not extract versionName from app-build.gradle"
+    exit 1
+fi
 
 # Increment versionCode
 NEW_CODE=$((CURRENT_CODE + 1))
 
-# Increment last number of versionName
-NEW_NAME=$(echo $CURRENT_NAME | awk -F. '{$NF = $NF + 1;}1' OFS=.)
+# Handle versionName increment - if it's a single number, convert to semantic versioning
+if [[ $CURRENT_NAME =~ ^[0-9]+$ ]]; then
+    # Single number version, convert to semantic versioning
+    NEW_NAME="1.0.$CURRENT_NAME"
+else
+    # Already semantic versioning, increment last number
+    NEW_NAME=$(echo $CURRENT_NAME | awk -F. '{$NF = $NF + 1;}1' OFS=.)
+fi
 
 # Update the temporary file
 sed -i '' "s/versionCode $CURRENT_CODE/versionCode $NEW_CODE/" app-build.gradle.tmp
